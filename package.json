@@ -1,6 +1,6 @@
 {
   "name": "mimir-find-the-worthy",
-  "version": "4.3.2",
+  "version": "4.3.6",
   "private": true,
   "type": "module",
   "description": "Mimir \u2014 Find the Worthy: privacy-first multimodal evidence intelligence deployed as one Render full-stack service.",

@@ -6,7 +6,7 @@ import vm from 'node:vm';
 function loadPrivacy() {
   const window = {};
   const context = vm.createContext({ window, console });
-  vm.runInContext(fs.readFileSync(new URL('../../frontend/public/privacy.js', import.meta.url), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(new URL('../public/privacy.js', import.meta.url), 'utf8'), context);
   return window.MimirPrivacy;
 }
 

@@ -1,0 +1,133 @@
+Senior technology delivery leader with extensive experience delivering Oracle ERP and Cloud transformation programmes, enterprise applications, testing, and business-critical technology change across complex, multi-stakeholder environments. Proven ability to take programmes from strategy and planning through implementation, testing, cutover, go-live, and stabilisation, whilst aligning technology delivery with business and operational priorities. Combines deep Oracle expertise across fusion cloud, e-business suite, financials, HCM, payroll, and procurement with strong governance, stakeholder management, vendor coordination, risk management, and test leadership. Recognised for bringing structure to complex programmes, resolving delivery challenges, and driving successful outcomes across global and geographically distributed organisations.
+
+Technical Proficiencies
+
+Oracle Applications & ERP: Oracle E-Business Suite (EBS) 9.4–R12, Oracle Cloud Fusion HCM, Oracle Cloud Fusion Financials, Oracle General Ledger (GL), Oracle Accounts Payables (AP), Oracle Purchasing (PO), iProcurement, iSupplier, Oracle Payroll, Oracle HRMS, Self-Service HR, Oracle HR Daily Business Intelligence (HR DBI), Oracle Learning Management (OLM), Oracle System Administration, Oracle Alerts, Oracle Business Intelligence Enterprise Edition (OBIEE), Oracle Business Intelligence Applications (OBIA), Oracle Discoverer, Oracle Property Manager (OPM)
+
+Business & Productivity: Business Objects, Noetix, Microsoft Project, Smartsheet, ServiceNow, Microsoft Visio, Microsoft Office
+
+Project Methodologies: PRINCE2, Oracle Application Implementation Methodology (AIM)
+
+Oracle Tools: SQLPlus, PL/SQL, SQLLoader, Configuration Snapshot, Web ADI
+
+Testing Tools: SpiraTest, Zephyr
+
+Professional Experience	 
+
+Project Management / Service Delivery at INFOMATRIX SOLUTIONS 	 January 2025–Present
+
+Direct day-to-day project and service delivery, aligning priorities, resources, dependencies, and timelines with business objectives. Maintain RAID governance, including risk, assumption, issue, and dependency tracking, with defined mitigation and escalation actions. Engage with internal teams, business stakeholders, vendors, and third-party suppliers to establish ownership and maintain delivery momentum. Coordinate test management, including preparation, execution, defect tracking, and resolution. Monitor resource requirements, materials, deliverables, and supplier commitments to identify constraints and address emerging issues. Apply experience from large-scale Oracle ERP programmes, testing, and service delivery environments to establish structured delivery practices within a start-up setting.
+
+Key Achievements:
+
+●	 Established a structured project governance framework from the ground up, introducing consistent RAID management, status reporting, action tracking, and delivery oversight.
+
+●	 Introduced greater delivery discipline to rapidly evolving startup environment, bringing enterprise-level project management practices into the development of a new healthcare product.
+
+●	 Translated Oracle ERP programme delivery experience into practical approaches for managing complex dependencies, stakeholder requirements, and delivery priorities across business and technology teams.
+
+Oracle Financials Cloud Project Manager (Contract) at SKECHERS USA, INC. – UK 	 August 2023 – December 2024
+
+Directed project planning, schedules, milestones, dependencies, RAID management, governance, and delivery reporting. Coordinated finance activities and requirements with the implementation partner, ensuring clear ownership and follow-through. Managed stakeholder communications and served as the primary liaison between UK Finance and the implementation partner. Aligned implementation activities with corporate finance strategy, internal procedures, security requirements, and regulatory expectations. Maintained project and finance documentation, including actions, decisions, activities, and delivery records.
+
+Key Achievements:
+
+●	 Supported successful replacement of the PeopleSoft Finance platform with Oracle Fusion Financials Cloud across four core modules: GL, AP, AR, and Cash Management.
+
+●	 Established a structured governance framework for UK Finance delivery, improving visibility across project status, risks, dependencies, and stakeholder actions.
+
+Test Manager (Contract) at ARUP 	 September 2021–December 2022
+
+Ledtest planning and execution across business, technical, integration, non-functional, and performance testing requirements. Coordinated SMEs, implementation partners, finance, HR, cyber security, infrastructure, and systems teams throughout testing activities. Managed SpiraTest configuration, test-case preparation, scenario uploads, SME training, and testing dashboards. Directed defect triage, prioritisation, retesting, and resolution tracking, ensuring alignment with project schedules/dependencies. Supported go/no-go assessments by consolidating test results, unresolved defects, risks, and business-readiness information.
+
+Key Achievements:
+
+●	 Established the testing strategy for Oracle Cloud HCM transformation, covering Core HR, Absence, Benefits, ORC, Compensation, and Security, with approximately 50 interfaces incorporated into the testing scope. 
+
+●	 Configured and enabled SpiraTest as the central test-management platform for the Finance Cloud Migration, converting existing Word and Excel test cases into structured, trackable testing assets across 5 Finance systems. 
+
+●	 Introduced structured testing metrics and KPI reporting, providing Project Boards and stakeholders with summary and drill-down visibility into testing progress and quality. 
+
+●	 Expanded testing coverage beyond functional validation by incorporating interface, business-process, non-functional, and performance scenarios, including initial JMeter usage for performance testing. 
+
+●	 Directed System Integration Testing for a major organisational transformation, coordinating test execution across key systems and data flows, whilst driving defects through resolution and retesting. 
+
+Project Manager at Data Intensity	 June 2021 – September 2021
+
+Managed concurrent Oracle delivery streams spanning EBS, ODI, OBI, EPM, SOA, and IDCS upgrades, alongside infrastructure hardening and OCI activities. Controlled project schedules in Smartsheet, comparing baseline and actual progress and addressing emerging variances. Coordinated technical forums, project governance meetings, and weekly resource reviews across delivery streams. Evaluated delivery risks, dependencies, and resource constraints, escalating significant concerns. 
+
+Key Achievements:
+
+●	 Maintained delivery visibility across multiple concurrent workstreams, enabling leadership to identify emerging schedule, resource, and technical constraints early. 
+
+●	 Improved escalation effectiveness by presenting Project Board and Steering Committee issues alongside actionable mitigation and recovery options. 
+
+●	 Balanced competing delivery priorities and resource demands across several Oracle and infrastructure initiatives within a highly compressed four-month engagement.
+
+Project Manager (Contract) at Chevron Traffic Management 	 April 2021 – June 2021
+
+Supported the General Counsel in scoping and managing a legal entity rationalisation project within a challenging delivery timeframe. Coordinated activities across Commercial, Communications/Branding, Tax, Treasury, Finance, IT, Legal, Operations, and Payroll/TUPE to capture requirements and interdependencies. 
+
+Key Achievements:
+
+●	 Maintained cross-functional alignment on required actions, process changes, and project deliverables. 
+
+●	 Monitored execution against deadlines and followed through with stakeholders to keep required activities progressing.
+
+Project Manager (Contract) at A.S. WATSON GROUP 	 September 2018–April 2020
+
+Directed country rollout sequencing, business readiness, cutover planning, dependencies, contingency planning, and post-go-live stabilisation. Led testing lifecycle, including priority-based end-to-end testing, SIT coordination, UAT support, test documentation, defect logging, and resolution tracking. Coordinated data-security requirements, including data masking and country-level ownership of system access and responsibilities. Maintained RAID management, proactively escalating risks and dependencies affecting milestones and the critical path.
+
+Key Achievements:
+
+●	 Led the IFRS 16 implementation on schedule across 30 businesses in 19 countries, enabling AS Watson to meet regulatory requirements within the required timeframe. 
+
+●	 Directed a highly complex multi-country transformation spanning autonomous businesses, with individual operations generating up to €2B+ in revenue. 
+
+●	 Enabled uninterrupted lease-management and landlord-payment operations through go-live, despite the complexity of historical leases and multiple country deployments. 
+
+●	 Established consistent Oracle and IFRS 16 adoption across countries, implementing platform and standard for the first time, supported by structured training and change activities. 
+
+Applications Manager (Contract) at ALLIANZ WORLDWIDE CARE 	 June 2015–September 2018
+
+Managed global application support and delivery activities across multiple regions and time zones, coordinating distributed teams and diverse user base. Provided senior-level operational oversight for Oracle/Java applications, including Gulliver and Citizen, ensuring service continuity. Directed Project and Test SCRUMs, overseeing release readiness, operational dependencies, and delivery risks. Engaged business users through focused meetings to understand operational needs and align application services accordingly. Evaluated testing tools, including Zephyr and Test Architect to explore test-automation capabilities. 
+
+Key Achievements:
+
+●	 Established a structured GDPR support process encompassing ticket capture, data-extract coordination, secure transmission, and collaboration with Data Protection and third parties. 
+
+●	 Enhanced incident-management capability through improved processes and adoption of BMC Remedy, creating a more structured approach to operational support. 
+
+●	 Improved management visibility into application operations through operational risk reporting, performance trends, and strategic KPI tracking.
+
+Additional Experience
+
+Metropolitan
+
+Project, Applications, and Test Manager
+
+Oracle Payroll Outsourcing to a Third Party Out Sourcing – Project / Test Manager
+
+Oracle Payroll Legislative Patching for 10+ years – Apps / Test Management
+
+Oracle Licencing / Security Audit Reviews – Apps Manager
+
+Implementation of R12 iSupplier within Oracle on Demand – Project Manager
+
+Co-sourcing of the Oracle ERP Support and DBA Team – Apps Manager
+
+Migration of Oracle R12 to Oracle Cloud – Apps and Test Manager
+
+Re-implementation of Oracle R12 – Apps and Test Manager
+
+Implementation of iProc and HR Self Service – Apps and Test Manager
+
+Upgrade to Oracle 11i – Apps and Test Manager
+
+COMAG Magazine Marketing | Project Manager / Development Lead
+
+Mentor Computer Services Ltd., | Development Consultant
+
+Reuters | Analyst Programmer
+
+Centre-File | Programmer

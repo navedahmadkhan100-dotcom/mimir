@@ -12,17 +12,18 @@
     ['locations', /\b(?:GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)[ ]?[0-9][ABD-HJLNP-UW-Z]{2})\b/gi, '[LOCATION_REDACTED]'],
     ['clearances', /\b(?:(?:current|active|valid|held|holds?|holding|eligible\s+for)?\s*)?(?:developed\s+vetting|security\s+check|security\s+cleared|dv\s+cleared|sc\s+cleared|bpSS\s+(?:cleared|completed)|ctc\s+cleared|nato\s+(?:secret|confidential)|ukic\s+clearance)\b(?:\s*(?:until|to|expiry|expires?)\s*[:\-]?\s*[^\n,;]+)?/gi, '[CLEARANCE_REDACTED]'],
     ['identifiers', /\b(?:national\s+insurance|ni\s*(?:number|no\.?|#)|passport\s*(?:number|no\.?|#)|driving\s+licen[cs]e\s*(?:number|no\.?|#)|national\s+id|tax\s+id|utr)\s*[:#\-]?\s*[A-Z0-9 -]{5,}\b/gi, '[IDENTIFIER_REDACTED]'],
-    ['socialHandles', /\b(?:skype|teams|telegram|twitter|x|instagram)\s*(?:id|handle|profile)?\s*[:\-]?\s*@?[A-Z0-9._-]{3,}/gi, '[PROFILE_REDACTED]'],
+    ['socialHandles', /\b(?:skype|teams|telegram|twitter|instagram|x)\s*(?:(?:id|handle|profile)\s*[:\-]?\s*|[:\-]\s*)@?[A-Z0-9._-]{3,}\b/gi, '[PROFILE_REDACTED]'],
     ['references', /\b(?:references?|referees?)\s*[:\-]\s*[^\n]+/gi, 'References: [REFERENCE_DETAILS_REDACTED]'],
   ];
 
   const TITLE_HINTS = ['engineer','developer','architect','consultant','manager','recruiter','analyst','administrator','admin','specialist','lead','head','director','officer','scientist','designer','product','project','program','support','technician','intern','student','professional','profile','summary','curriculum','resume','cv'];
-  const SECTION_HINTS = /^(experience|work experience|employment|career history|professional experience|work history|projects|education|skills|certifications|summary|profile)\b/i;
+  const SECTION_HINTS = /^(experience|work experience|employment|career history|professional experience|work history|projects|education|skills|technical skills|technical proficiencies|technical proficiency|core competencies|competencies|certifications|summary|profile|professional summary|career summary|additional experience)\b/i;
   const DATE_RANGE_RE = /\b(?:19|20)\d{2}\b.*(?:\b(?:19|20)\d{2}\b|present|current|now)|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+(?:19|20)\d{2}\b/i;
 
   function looksLikeName(line) {
     const clean = String(line).trim().replace(/[|•·]/g, ' ');
     if (!clean || clean.length > 60 || /\d|@|https?:|www\./i.test(clean)) return false;
+    if (SECTION_HINTS.test(clean)) return false;
     if (TITLE_HINTS.some((hint) => clean.toLowerCase().includes(hint))) return false;
     const words = clean.split(/\s+/).filter(Boolean);
     return words.length >= 2 && words.length <= 5 && words.every((w) => /^[A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,}\.?$/.test(w));
@@ -35,6 +36,7 @@
   function looksLikeEmployerLine(line) {
     const text = String(line || '').trim();
     if (!text || text.length > 100 || SECTION_HINTS.test(text) || looksLikeJobTitle(text)) return false;
+    if (/^Employer\s+\d+$/i.test(text)) return false;
     // A date range is chronology evidence, never an employer name.
     if (DATE_RANGE_RE.test(text) || /^\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/i.test(text) && /\b(?:19|20)\d{2}\b/.test(text)) return false;
     if (/\b(university|college|school|institute|academy|certification|certificate)\b/i.test(text)) return false;
@@ -63,10 +65,15 @@
     }
     for (let i=0; i<lines.length; i+=1) {
       const line = String(lines[i] || '').trim();
-      const atMatch = line.match(/(?:@|\bat\b)\s+([^–—\n(]{2,80})/i);
+      const atMatch = line.match(/(?:@|\bat\b)\s+(.{2,120})/i);
       if (!atMatch) continue;
-      const original = atMatch[1].trim().replace(/[,:;\-]+$/, '').trim();
+      let original = atMatch[1].trim();
+      // Preserve date ranges while pseudonymising only the employer name.
+      original = original.split(/[–—]/, 1)[0].trim();
+      original = original.replace(/\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(?:19|20)\d{2}.*$/i, '').trim();
+      original = original.replace(/[,:;\-]+$/, '').trim();
       if (!original) continue;
+      if (/^Employer\s+\d+$/i.test(original)) continue;
       const normalized = original.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
       if (normalized) candidates.push({ lineIndex:i, original, normalized, startYear:startYearNear(i) });
     }
@@ -156,5 +163,5 @@
     for (const employer of findEmployerCandidates(lines)) terms.add(employer.original);
     return [...terms];
   }
-  window.MimirPrivacy = { mask, leakScan, sensitiveTerms, rulesVersion: 'privacy-firewall-2.3.0' };
+  window.MimirPrivacy = { mask, leakScan, sensitiveTerms, rulesVersion: 'privacy-firewall-2.5.0' };
 })();

@@ -10,7 +10,7 @@ const ADDRESS_RE = /^[ \t]*(?:home\s+address|residential\s+address|postal\s+addr
 const UK_POSTCODE_RE = /\b(?:GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)[ ]?[0-9][ABD-HJLNP-UW-Z]{2})\b/gi;
 const CLEARANCE_RE = /\b(?:(?:current|active|valid|held|holds?|holding|eligible\s+for)?\s*)?(?:developed\s+vetting|security\s+check|security\s+cleared|dv\s+cleared|sc\s+cleared|bpss\s+(?:cleared|completed)|ctc\s+cleared|nato\s+(?:secret|confidential)|ukic\s+clearance)\b(?:\s*(?:until|to|expiry|expires?)\s*[:\-]?\s*[^\n,;]+)?/gi;
 const IDENTIFIER_RE = /\b(?:national\s+insurance|ni\s*(?:number|no\.?|#)|passport\s*(?:number|no\.?|#)|driving\s+licen[cs]e\s*(?:number|no\.?|#)|national\s+id|tax\s+id|utr|employee\s+id|payroll\s+id)\s*[:#\-]?\s*[A-Z0-9 -]{5,}\b/gi;
-const SOCIAL_HANDLE_RE = /\b(?:skype|teams|telegram|twitter|instagram)\s*(?:id|handle|profile)?\s*[:\-]?\s*@?[A-Z0-9._-]{3,}/gi;
+const SOCIAL_HANDLE_RE = /\b(?:skype|teams|telegram|twitter|instagram|x)\s*(?:(?:id|handle|profile)\s*[:\-]?\s*|[:\-]\s*)@?[A-Z0-9._-]{3,}\b/gi;
 const REFERENCE_RE = /\b(?:references?|referees?)\s*[:\-]\s*[^\n]+/gi;
 const HONORIFIC_RE = /\b(?:mr|mrs|ms|miss|dr)\.?\s+(?=[A-Z][a-z])/g;
 
@@ -21,12 +21,13 @@ const TITLE_HINTS = [
   'professional', 'profile', 'summary', 'curriculum', 'resume', 'cv',
 ];
 
-const SECTION_HINTS = /^(experience|work experience|employment|career history|professional experience|work history|projects|education|skills|certifications|summary|profile)\b/i;
+const SECTION_HINTS = /^(experience|work experience|employment|career history|professional experience|work history|projects|education|skills|technical skills|technical proficiencies|technical proficiency|core competencies|competencies|certifications|summary|profile|professional summary|career summary|additional experience)\b/i;
 const DATE_RANGE_RE = /\b(?:19|20)\d{2}\b.*(?:\b(?:19|20)\d{2}\b|present|current|now)|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+(?:19|20)\d{2}\b/i;
 
 function looksLikeName(line) {
   const clean = line.trim().replace(/[|•·]/g, ' ');
   if (!clean || clean.length > 60 || /\d|@|https?:|www\./i.test(clean)) return false;
+  if (SECTION_HINTS.test(clean)) return false;
   if (TITLE_HINTS.some((hint) => clean.toLowerCase().includes(hint))) return false;
   const words = clean.split(/\s+/).filter(Boolean);
   if (words.length < 2 || words.length > 5) return false;
@@ -41,6 +42,10 @@ function looksLikeJobTitle(line) {
 function looksLikeEmployerLine(line) {
   const text = line.trim();
   if (!text || text.length > 100) return false;
+  // Browser-side privacy preparation already pseudonymises employers as
+  // `Employer N`. Those placeholders are safe and must never be detected
+  // again as real employer PII by the server defense-in-depth pass.
+  if (/^Employer\s+\d+$/i.test(text)) return false;
   if (SECTION_HINTS.test(text) || looksLikeJobTitle(text)) return false;
   // Date ranges are chronology evidence, never employer names.
   if (DATE_RANGE_RE.test(text) || (/^\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/i.test(text) && /\b(?:19|20)\d{2}\b/.test(text))) return false;
@@ -87,10 +92,16 @@ function findEmployerCandidates(lines) {
   // "Lead Architect @ TCS / NESO — Jan 2026". These headings are common in architect CVs.
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i].trim();
-    const atMatch = line.match(/(?:@|\bat\b)\s+([^–—\n(]{2,80})/i);
+    const atMatch = line.match(/(?:@|\bat\b)\s+(.{2,120})/i);
     if (!atMatch) continue;
-    const original = atMatch[1].trim().replace(/[,:;\-]+$/, '').trim();
+    let original = atMatch[1].trim();
+    // Keep chronology intact. CV headings often look like:
+    // "Role at COMPANY   January 2025–Present". Only COMPANY is PII.
+    original = original.split(/[–—]/, 1)[0].trim();
+    original = original.replace(/\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(?:19|20)\d{2}.*$/i, '').trim();
+    original = original.replace(/[,:;\-]+$/, '').trim();
     if (!original || original.length < 2) continue;
+    if (/^Employer\s+\d+$/i.test(original)) continue;
     const normalized = original.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (!normalized) continue;
     candidates.push({ lineIndex: i, original, normalized, startYear: startYearNear(i), inline: true });
