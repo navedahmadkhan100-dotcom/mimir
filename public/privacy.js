@@ -8,7 +8,7 @@
     ['nationality', /\b(?:nationality|citizenship)\s*[:\-]?\s*[^\n|,;]+/gi, 'Nationality: [NATIONALITY_REDACTED]'],
     ['gender', /\b(?:gender|sex)\s*[:\-]?\s*[^\n|,;]+/gi, 'Gender: [GENDER_REDACTED]'],
     ['maritalStatus', /\b(?:marital\s*status|civil\s*status)\s*[:\-]?\s*[^\n|,;]+/gi, 'Marital Status: [MARITAL_STATUS_REDACTED]'],
-    ['addresses', /\b(?:home\s+address|residential\s+address|postal\s+address|correspondence\s+address|address|location)\s*[:\-]?\s*[^\n]+/gi, 'Location: [LOCATION_REDACTED]'],
+    ['addresses', /^[ \t]*(?:home\s+address|residential\s+address|postal\s+address|correspondence\s+address|address|location)\b[ \t]*(?::|\-)?[ \t]+[^\n]+$/gim, 'Location: [LOCATION_REDACTED]'],
     ['locations', /\b(?:GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)[ ]?[0-9][ABD-HJLNP-UW-Z]{2})\b/gi, '[LOCATION_REDACTED]'],
     ['clearances', /\b(?:(?:current|active|valid|held|holds?|holding|eligible\s+for)?\s*)?(?:developed\s+vetting|security\s+check|security\s+cleared|dv\s+cleared|sc\s+cleared|bpSS\s+(?:cleared|completed)|ctc\s+cleared|nato\s+(?:secret|confidential)|ukic\s+clearance)\b(?:\s*(?:until|to|expiry|expires?)\s*[:\-]?\s*[^\n,;]+)?/gi, '[CLEARANCE_REDACTED]'],
     ['identifiers', /\b(?:national\s+insurance|ni\s*(?:number|no\.?|#)|passport\s*(?:number|no\.?|#)|driving\s+licen[cs]e\s*(?:number|no\.?|#)|national\s+id|tax\s+id|utr)\s*[:#\-]?\s*[A-Z0-9 -]{5,}\b/gi, '[IDENTIFIER_REDACTED]'],
