@@ -1,18 +1,26 @@
-# Mimir v4.4.5 — Fast DOCX Visuals
+# Mimir v4.5.0 — SEO Growth Foundation
 
-This release fixes the multi-minute visual-preparation stall seen on architecture-heavy DOCX CVs.
+This release keeps the v4.4.5 evaluation engine and fast DOCX visual pipeline intact. It adds search-engine discovery infrastructure without turning the evaluator homepage into a long marketing page.
 
-## Changed
-- DOCX embedded visuals no longer run Tesseract OCR on the normal path.
-- Direct CV text PII is still redacted locally before evaluation.
-- Embedded PNG/JPEG/WebP diagrams that already fit the backend safety budget are passed directly to Mimir/Gemini without decode/re-encode.
-- Oversized/unsupported visuals use image decode + compression only, not OCR.
-- The already-open JSZip document is reused between text extraction and visual preparation.
-- The UI shows the detected visual count immediately (for example, `8 visuals detected`) before visual payload preparation finishes.
-- Evaluation waits at most 6 seconds for any remaining visual preparation, then proceeds with all visuals already ready.
+## Added
+- Search-focused homepage title, description, canonical URL, Open Graph and Twitter metadata.
+- WebSite + WebApplication/SoftwareApplication JSON-LD.
+- Crawlable favicon, logo, social preview image and web manifest.
+- `robots.txt`, `sitemap.xml`, `llms.txt`.
+- Dedicated crawlable pages for CV evaluator, AI CV screening, CV–JD matching, how Mimir works, evidence-based recruitment, GDPR/recruitment AI, EU AI Act/recruitment AI, privacy/data handling and About Mimir.
+- Breadcrumb structured data on SEO pages.
+- Quiet internal links from the evaluator footer to the topical pages.
+- Canonical 301 redirect from `www.mimir.co.in` to `mimir.co.in`.
+- `X-Robots-Tag: noindex, nofollow` on API responses.
+- Real 404 responses for unknown public URLs to avoid soft-404 indexing.
 
-## Privacy trade-off
-Practical PII mode redacts direct identifiers from CV text. DOCX embedded technical visuals are no longer OCR-scanned for PII because that OCR path caused severe stalls. This is an intentional speed/fidelity trade-off.
+## Not changed
+- Evidence Graph
+- Claim Model / entailment
+- Evidence Boundaries
+- Odin
+- Deterministic scoring
+- PII behavior
+- PDF/DOCX extraction and v4.4.5 fast visual path
 
-## Intelligence
-No changes were made to Claim Model, Evidence Graph, Entailment, Evidence Boundaries, Odin, policy, deterministic scoring, score lineage, or prompt-injection isolation.
+SEO can improve discoverability but no code change can guarantee a Google position. Authority, links, search demand, content usefulness and time still matter.

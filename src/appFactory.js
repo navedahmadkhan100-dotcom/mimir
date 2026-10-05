@@ -73,6 +73,12 @@ export function createMimirApp(options = {}) {
   // and rate limiting use the real client address rather than the Render proxy address.
   app.set('trust proxy', 1);
 
+  // SEO canonical host: keep a single public URL in search indexes.
+  app.use((req, res, next) => {
+    if (req.hostname === 'www.mimir.co.in') return res.redirect(301, `https://mimir.co.in${req.originalUrl}`);
+    return next();
+  });
+
   // Browser-origin policy. Render serves the official frontend and API from the
   // same service; configured custom origins are also allowed for controlled moves.
   const allowedOrigins = new Set(
@@ -130,7 +136,7 @@ export function createMimirApp(options = {}) {
     etag: true,
     maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
     setHeaders(res, filePath) {
-      if (filePath.endsWith('index.html') || filePath.endsWith('config.js')) res.setHeader('Cache-Control', 'no-cache');
+      if (filePath.endsWith('.html') || filePath.endsWith('config.js') || filePath.endsWith('sitemap.xml') || filePath.endsWith('robots.txt')) res.setHeader('Cache-Control', 'no-cache');
     },
   }));
 
@@ -158,6 +164,7 @@ export function createMimirApp(options = {}) {
 
   app.use('/api', (req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, private, max-age=0');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.setHeader('Pragma', 'no-cache');
     const origin = req.headers.origin;
     const fetchSite = String(req.headers['sec-fetch-site'] || '').toLowerCase();
@@ -176,7 +183,7 @@ export function createMimirApp(options = {}) {
     res.json({
       ok: true,
       app: 'Mimir — Find the Worthy',
-      version: '4.4.5',
+      version: '4.5.0',
       architecture: 'Document Intelligence + Claim Entailment + Evidence Boundaries + Odin + Evidence Policy + Deterministic Score Lineage + Verification Intelligence',
       model: MODEL_ID,
       promptVersion: PROMPT_VERSION,
@@ -412,8 +419,10 @@ export function createMimirApp(options = {}) {
   app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
 
   if (serveFrontend) {
+    // Mimir does not use client-side URL routing. Unknown public URLs must return a real
+    // 404 instead of the homepage with status 200; this avoids soft-404 crawl pollution.
     app.use((_req, res) => {
-      res.sendFile(path.resolve(process.cwd(), 'public', 'index.html'));
+      res.status(404).sendFile(path.resolve(process.cwd(), 'public', '404.html'));
     });
   } else {
     app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));

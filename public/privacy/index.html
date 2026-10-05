@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090713" />
+  <title>Mimir Privacy & Candidate Data Handling</title>
+  <meta name="description" content="How the live Mimir CV evaluator prepares candidate documents, reduces basic direct identifiers, processes technical visuals and handles persistence." />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <link rel="canonical" href="https://mimir.co.in/privacy/" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Mimir" />
+  <meta property="og:title" content="Mimir Privacy & Candidate Data Handling" />
+  <meta property="og:description" content="How the live Mimir CV evaluator prepares candidate documents, reduces basic direct identifiers, processes technical visuals and handles persistence." />
+  <meta property="og:url" content="https://mimir.co.in/privacy/" />
+  <meta property="og:image" content="https://mimir.co.in/assets/mimir-find-the-worthy-og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Mimir Privacy & Candidate Data Handling" />
+  <meta name="twitter:description" content="How the live Mimir CV evaluator prepares candidate documents, reduces basic direct identifiers, processes technical visuals and handles persistence." />
+  <meta name="twitter:image" content="https://mimir.co.in/assets/mimir-find-the-worthy-og.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/seo.css?v=4.5.0" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "WebPage", "@id": "https://mimir.co.in/privacy/#page", "url": "https://mimir.co.in/privacy/", "name": "Privacy & Data Handling", "description": "How the live Mimir CV evaluator prepares candidate documents, reduces basic direct identifiers, processes technical visuals and handles persistence.", "isPartOf": {"@id": "https://mimir.co.in/#website"}, "inLanguage": "en", "dateModified": "2026-10-05"}, {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Mimir", "item": "https://mimir.co.in/"}, {"@type": "ListItem", "position": 2, "name": "Privacy & Data Handling", "item": "https://mimir.co.in/privacy/"}]}]}</script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="/"><img src="/assets/mimir-logo-512.png" alt="" width="42" height="42" />Mimir — Find the Worthy</a>
+      <nav class="topnav" aria-label="Primary"><a href="/cv-evaluator/">CV Evaluator</a><a href="/ai-cv-screening/">AI CV Screening</a><a href="/cv-jd-matching/">CV–JD Matching</a><a href="/how-mimir-works/">How Mimir Works</a><a class="cta" href="/#evaluate">Evaluate a CV</a></nav>
+    </header>
+    <div class="breadcrumb"><a href="/">Mimir</a> / Privacy & Data Handling</div>
+    <main>
+      <section class="hero">
+        <div class="kicker">PRIVACY & DATA HANDLING</div>
+        <h1>What happens to a CV when you use Mimir.</h1>
+        <p>Mimir is designed to minimise unnecessary candidate identity data while preserving the professional evidence needed for recruitment evaluation. This page describes the current technical behaviour of the live application; it is not a substitute for an employer’s privacy notice or legal assessment.</p>
+        <div class="hero-actions"><a class="cta" href="/#evaluate">Try Mimir CV Evaluator</a><a class="secondary" href="/how-mimir-works/">See how Mimir works</a></div>
+      </section>
+      <article class="content"><h2>Current document flow</h2><div class="steps"><div class="card"><span>BROWSER</span><h3>Prepare the document</h3><p>PDF, DOCX or pasted CV content is processed client-side to extract text and substantive visuals.</p></div><div class="card"><span>MINIMISE</span><h3>Reduce direct identifiers</h3><p>Basic candidate contact/header PII is redacted locally where detected. Text is remasked server-side as defence in depth.</p></div><div class="card"><span>EVALUATE</span><h3>Assess professional evidence</h3><p>Prepared evidence is evaluated against the structured JD. The current deployment does not use a server database for raw CV storage.</p></div></div>
+<h2>Visual CV evidence</h2><p>Technical diagrams, architecture drawings and charts can be professionally relevant evidence. In practical privacy mode, Mimir preserves those visuals for evaluation rather than blocking the CV because an ambiguous visual may contain PII. Users should avoid uploading unnecessary personal photos or identity documents.</p>
+<h2>Local persistence</h2><p>Saved job-description structures and Evidence Intelligence observations are browser-local in the current build. Clearing browser storage removes those locally stored items. Evaluation metadata may be returned to the browser as part of the result.</p>
+<h2>Important limitation</h2><p>No automated PII detector is perfect. Mimir reduces obvious direct identifiers but should not be treated as a complete anonymisation service. Organisations using candidate data remain responsible for their own privacy, security, retention and legal obligations.</p>
+        <h2>Explore Mimir</h2>
+        <div class="linkgrid"><a class="card" href="/gdpr-ai-recruitment/"><h3>GDPR & Recruitment AI</h3><p>Read how Mimir’s data-minimisation design relates to GDPR principles.</p></a><a class="card" href="/how-mimir-works/"><h3>How Mimir Works</h3><p>See the complete document and evidence pipeline.</p></a><a class="card" href="/cv-evaluator/"><h3>AI CV Evaluator</h3><p>Use the live evaluation tool.</p></a><a class="card" href="/eu-ai-act-recruitment/"><h3>EU AI Act & Recruitment</h3><p>Read the separate AI governance overview.</p></a></div>
+      </article>
+    </main>
+    <footer class="footer"><span>© 2026 Mimir — Find the Worthy</span><nav><a href="/cv-evaluator/">CV Evaluator</a><a href="/ai-cv-screening/">AI CV Screening</a><a href="/cv-jd-matching/">CV–JD Matching</a><a href="/how-mimir-works/">How Mimir Works</a><a href="/evidence-based-recruitment/">Evidence-Based Recruitment</a><a href="/gdpr-ai-recruitment/">GDPR & Recruitment AI</a><a href="/eu-ai-act-recruitment/">EU AI Act & Recruitment</a><a href="/privacy/">Privacy & Data Handling</a><a href="/about/">About Mimir</a></nav></footer>
+  </div>
+</body>
+</html>

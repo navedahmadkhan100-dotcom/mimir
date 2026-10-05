@@ -1,0 +1,13 @@
+# Mimir — Find the Worthy
+
+Mimir is an evidence-based AI CV evaluator for recruiters. It compares CV evidence with job-description requirements using document intelligence, claim entailment, evidence boundaries, Odin adversarial verification and deterministic JavaScript scoring. The AI model interprets evidence; it does not directly choose the numerical candidate score. Recruiters remain responsible for final decisions.
+
+Canonical site: https://mimir.co.in/
+
+Key pages:
+- https://mimir.co.in/cv-evaluator/
+- https://mimir.co.in/how-mimir-works/
+- https://mimir.co.in/evidence-based-recruitment/
+- https://mimir.co.in/privacy/
+- https://mimir.co.in/gdpr-ai-recruitment/
+- https://mimir.co.in/eu-ai-act-recruitment/

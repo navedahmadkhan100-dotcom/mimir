@@ -313,3 +313,6 @@ body.has-results,body.is-evaluating{overflow-y:auto!important;height:auto!import
 .score-lineage-grid span{display:flex;flex-direction:column;gap:2px;padding:6px 7px;border-radius:9px;background:rgba(255,255,255,.03)}
 .score-lineage-grid strong{font-size:10px;color:#e0dde6}
 @media(max-width:720px){.claim-item{grid-template-columns:1fr}.claim-summary{justify-content:flex-start}.score-lineage-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v4.5 SEO discovery links: deliberately quiet so the evaluator remains the primary UI. */
+.seo-link-row{display:flex;justify-content:center;flex-wrap:wrap;gap:7px 14px;margin:13px 6px 0;padding-top:10px;border-top:1px solid rgba(255,255,255,.055);font-size:9.5px;color:#777487}.seo-link-row a{color:#817e93;text-decoration:none;transition:color .18s ease}.seo-link-row a:hover,.seo-link-row a:focus{color:#c9c6d9;text-decoration:underline;text-underline-offset:3px}@media(max-width:620px){.seo-link-row{gap:6px 11px;font-size:9px;margin-top:10px}}

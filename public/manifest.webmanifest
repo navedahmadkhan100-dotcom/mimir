@@ -1,0 +1,16 @@
+{
+  "name": "Mimir \u2014 Find the Worthy",
+  "short_name": "Mimir",
+  "description": "Evidence-based AI CV evaluator for recruiters.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090713",
+  "theme_color": "#090713",
+  "icons": [
+    {
+      "src": "/assets/mimir-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

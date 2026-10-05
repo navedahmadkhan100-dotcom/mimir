@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090713" />
+  <title>GDPR & AI CV Screening: Data Minimisation by Design | Mimir</title>
+  <meta name="description" content="How Mimir approaches GDPR-aware recruitment AI through browser-side basic PII redaction, data minimisation, limited persistence and human-controlled evaluation." />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <link rel="canonical" href="https://mimir.co.in/gdpr-ai-recruitment/" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Mimir" />
+  <meta property="og:title" content="GDPR & AI CV Screening: Data Minimisation by Design | Mimir" />
+  <meta property="og:description" content="How Mimir approaches GDPR-aware recruitment AI through browser-side basic PII redaction, data minimisation, limited persistence and human-controlled evaluation." />
+  <meta property="og:url" content="https://mimir.co.in/gdpr-ai-recruitment/" />
+  <meta property="og:image" content="https://mimir.co.in/assets/mimir-find-the-worthy-og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="GDPR & AI CV Screening: Data Minimisation by Design | Mimir" />
+  <meta name="twitter:description" content="How Mimir approaches GDPR-aware recruitment AI through browser-side basic PII redaction, data minimisation, limited persistence and human-controlled evaluation." />
+  <meta name="twitter:image" content="https://mimir.co.in/assets/mimir-find-the-worthy-og.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/seo.css?v=4.5.0" />
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "Article", "@id": "https://mimir.co.in/gdpr-ai-recruitment/#page", "url": "https://mimir.co.in/gdpr-ai-recruitment/", "name": "GDPR and Recruitment AI", "description": "How Mimir approaches GDPR-aware recruitment AI through browser-side basic PII redaction, data minimisation, limited persistence and human-controlled evaluation.", "isPartOf": {"@id": "https://mimir.co.in/#website"}, "inLanguage": "en", "dateModified": "2026-10-05"}, {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Mimir", "item": "https://mimir.co.in/"}, {"@type": "ListItem", "position": 2, "name": "GDPR and Recruitment AI", "item": "https://mimir.co.in/gdpr-ai-recruitment/"}]}]}</script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="/"><img src="/assets/mimir-logo-512.png" alt="" width="42" height="42" />Mimir — Find the Worthy</a>
+      <nav class="topnav" aria-label="Primary"><a href="/cv-evaluator/">CV Evaluator</a><a href="/ai-cv-screening/">AI CV Screening</a><a href="/cv-jd-matching/">CV–JD Matching</a><a href="/how-mimir-works/">How Mimir Works</a><a class="cta" href="/#evaluate">Evaluate a CV</a></nav>
+    </header>
+    <div class="breadcrumb"><a href="/">Mimir</a> / GDPR and Recruitment AI</div>
+    <main>
+      <section class="hero">
+        <div class="kicker">PRIVACY BY DESIGN</div>
+        <h1>GDPR-aware recruitment AI starts by asking which candidate data the evaluation actually needs.</h1>
+        <p>Mimir is designed around data minimisation: a technical capability assessment usually does not need a candidate’s name, email, phone number or social profile. Basic direct identifiers are therefore reduced in the browser before the prepared candidate evidence is evaluated.</p>
+        <div class="hero-actions"><a class="cta" href="/#evaluate">Try Mimir CV Evaluator</a><a class="secondary" href="/how-mimir-works/">See how Mimir works</a></div>
+      </section>
+      <article class="content"><h2>Data minimisation in recruitment</h2><p>The GDPR principle of data minimisation requires personal data to be adequate, relevant and limited to what is necessary for the stated purpose. For capability evaluation, identity fields are often not necessary to determine whether the CV evidences technologies, project ownership, certifications or delivery scope.</p>
+<h2>What Mimir currently does</h2><ul><li>Raw uploaded CV files are prepared in the browser rather than being uploaded as raw documents to the evaluation API.</li><li>Basic direct identifiers such as candidate contact details are redacted locally where detected.</li><li>The server applies deterministic text masking again as defence in depth.</li><li>The current Mimir deployment does not use a server database for storing raw candidate CVs.</li><li>Recruiter decisions remain human-controlled.</li></ul>
+<h2>What this does not mean</h2><p><strong>Mimir does not claim legal GDPR compliance merely because these technical controls exist.</strong> A production deployment still requires the controller or employer to establish lawful basis, transparency information, processor arrangements, retention and deletion rules, data-subject rights processes, security measures, transfer safeguards where relevant, and a DPIA when required.</p>
+<div class="callout">Privacy engineering supports compliance; it does not replace the legal and organisational obligations of the organisation using the system.</div>
+<h2>Official GDPR references</h2><ul class="source-list"><li><a href="https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/principles-gdpr_en" rel="noopener noreferrer">European Commission — Principles of the GDPR</a></li><li><a href="https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/obligations_en" rel="noopener noreferrer">European Commission — Data protection obligations</a></li></ul>
+        <h2>Explore Mimir</h2>
+        <div class="linkgrid"><a class="card" href="/privacy/"><h3>Privacy & Data Handling</h3><p>Read the practical data flow used by the live Mimir application.</p></a><a class="card" href="/eu-ai-act-recruitment/"><h3>EU AI Act & Recruitment</h3><p>See the separate AI-governance considerations for recruitment.</p></a><a class="card" href="/how-mimir-works/"><h3>How Mimir Works</h3><p>Understand the evidence and governance architecture.</p></a><a class="card" href="/cv-evaluator/"><h3>AI CV Evaluator</h3><p>Return to the product evaluation workflow.</p></a></div>
+      </article>
+    </main>
+    <footer class="footer"><span>© 2026 Mimir — Find the Worthy</span><nav><a href="/cv-evaluator/">CV Evaluator</a><a href="/ai-cv-screening/">AI CV Screening</a><a href="/cv-jd-matching/">CV–JD Matching</a><a href="/how-mimir-works/">How Mimir Works</a><a href="/evidence-based-recruitment/">Evidence-Based Recruitment</a><a href="/gdpr-ai-recruitment/">GDPR & Recruitment AI</a><a href="/eu-ai-act-recruitment/">EU AI Act & Recruitment</a><a href="/privacy/">Privacy & Data Handling</a><a href="/about/">About Mimir</a></nav></footer>
+  </div>
+</body>
+</html>
