@@ -14,7 +14,7 @@ test('Render Blueprint uses one Node web service with health check', () => {
 });
 
 test('Render fullstack package contains required runtime dependencies', () => {
-  assert.equal(pkg.version, '4.4.2');
+  assert.equal(pkg.version, '4.4.3');
   for (const dependency of ['express', '@google/genai', 'sharp']) {
     assert.ok(pkg.dependencies[dependency], `missing ${dependency}`);
   }

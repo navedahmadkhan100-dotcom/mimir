@@ -29,6 +29,12 @@ const state = {
   cvDocumentIntel: null,
   jdVisualAssets: [],
   cvVisualAssets: [],
+  jdVisualPromise: null,
+  cvVisualPromise: null,
+  jdVisualStatus: 'idle',
+  cvVisualStatus: 'idle',
+  jdVisualGeneration: 0,
+  cvVisualGeneration: 0,
   isEvaluating: false,
   abortController: null,
   runtimeMeta: { scoringVersion: 'unknown', promptVersion: 'unknown', referenceYear: 'unknown', model: 'unknown' },
@@ -204,6 +210,9 @@ function detachUploadedSource(kind, { edited = false } = {}) {
     state.cvFile = null;
     state.cvDocumentIntel = null;
     state.cvVisualAssets = [];
+    state.cvVisualPromise = null;
+    state.cvVisualStatus = 'idle';
+    state.cvVisualGeneration += 1;
     $('cvFile').value = '';
     $('cvFileName').textContent = edited && hadSource
       ? 'Visual source detached after text edit · re-upload to restore diagrams'
@@ -217,6 +226,9 @@ function detachUploadedSource(kind, { edited = false } = {}) {
   state.jdFile = null;
   state.jdDocumentIntel = null;
   state.jdVisualAssets = [];
+  state.jdVisualPromise = null;
+  state.jdVisualStatus = 'idle';
+  state.jdVisualGeneration += 1;
   $('jdFile').value = '';
   $('jdFileName').textContent = edited && hadSource
     ? 'Visual source detached after text edit · re-upload to restore diagrams'
@@ -235,7 +247,7 @@ async function removeUploadedFile(kind) {
     $('cvText').value = '';
     $('cvText').classList.remove('is-redacted');
     const transparency = $('cvTransparency');
-    if (transparency) transparency.textContent = 'Drop a file to preview the redacted text channel. Diagrams and charts are analysed as a separate privacy-scrubbed evidence channel.';
+    if (transparency) transparency.textContent = 'Drop a file to preview the redacted text channel. Text becomes ready first; diagrams and charts prepare in the background as a separate evidence channel.';
     showToast('CV file and extracted text removed.');
   } else {
     $('jdText').value = '';
@@ -287,6 +299,71 @@ function renderDocumentIntel(kind, intel = null) {
   element.classList.remove('hidden');
 }
 
+async function startVisualPreparation(file, kind, textData) {
+  const isCv = kind === 'cv';
+  const promiseKey = isCv ? 'cvVisualPromise' : 'jdVisualPromise';
+  const statusKey = isCv ? 'cvVisualStatus' : 'jdVisualStatus';
+  const generationKey = isCv ? 'cvVisualGeneration' : 'jdVisualGeneration';
+  const assetsKey = isCv ? 'cvVisualAssets' : 'jdVisualAssets';
+  const intelKey = isCv ? 'cvDocumentIntel' : 'jdDocumentIntel';
+  const label = isCv ? $('cvFileName') : $('jdFileName');
+  const transparency = $('cvTransparency');
+
+  const generation = state[generationKey] + 1;
+  state[generationKey] = generation;
+  state[statusKey] = 'processing';
+  state[assetsKey] = [];
+
+  const preparation = window.MimirDocumentClient.prepareVisuals(file, kind, textData, {
+    onAsset: (asset) => {
+      if (state[generationKey] !== generation) return;
+      if (!state[assetsKey].some((item) => item.id === asset.id)) state[assetsKey].push(asset);
+    },
+  }).then((visualData) => {
+    if (state[generationKey] !== generation) return null;
+    state[assetsKey] = visualData.visualAssets || state[assetsKey] || [];
+    state[intelKey] = visualData.documentIntelligence || state[intelKey];
+    state[statusKey] = 'ready';
+    label.textContent = `${file.name} · local only`;
+    renderDocumentIntel(kind, state[intelKey]);
+
+    if (isCv && transparency) {
+      const prepared = Number(state[intelKey]?.visualAssetsPrepared || 0);
+      const withheld = Number(state[intelKey]?.visualAssetsWithheld || 0);
+      transparency.innerHTML = `<strong>Basic PII redaction applied.</strong> CV text is ready and ${prepared} diagram/chart visual${prepared === 1 ? '' : 's'} prepared locally.${withheld ? ` ${withheld} visual candidate${withheld === 1 ? '' : 's'} withheld because local visual privacy/quality checks could not complete safely.` : ''}`;
+    }
+    return visualData;
+  }).catch((error) => {
+    if (state[generationKey] !== generation) return null;
+    state[statusKey] = 'failed';
+    label.textContent = `${file.name} · text ready · visuals skipped`;
+    state[intelKey] = {
+      ...(state[intelKey] || {}),
+      visualStatus:'failed',
+      notes:[...((state[intelKey]?.notes) || []), `Visual preparation skipped: ${error?.message || 'unknown visual processing error'}`],
+    };
+    renderDocumentIntel(kind, state[intelKey]);
+    if (isCv && transparency) transparency.innerHTML = '<strong>Basic PII redaction applied.</strong> CV text is ready. Diagram/chart preparation could not finish, so Mimir will continue with the text evidence instead of blocking evaluation.';
+    return null;
+  });
+
+  state[promiseKey] = preparation;
+  return preparation;
+}
+
+async function waitForVisualPreparation({ includeJd = true, maxWaitMs = 8000 } = {}) {
+  const pending = [];
+  if (state.cvVisualStatus === 'processing' && state.cvVisualPromise) pending.push(state.cvVisualPromise);
+  if (includeJd && state.jdVisualStatus === 'processing' && state.jdVisualPromise) pending.push(state.jdVisualPromise);
+  if (!pending.length) return { timedOut:false };
+
+  let timer;
+  const timeoutPromise = new Promise((resolve) => { timer = setTimeout(() => resolve('timeout'), maxWaitMs); });
+  const outcome = await Promise.race([Promise.allSettled(pending).then(() => 'ready'), timeoutPromise]);
+  clearTimeout(timer);
+  return { timedOut: outcome === 'timeout' };
+}
+
 async function extractFileToTextarea(file, kind) {
   if (!validateFile(file)) return;
   clearError();
@@ -297,45 +374,55 @@ async function extractFileToTextarea(file, kind) {
   const textarea = isCv ? $('cvText') : $('jdText');
   const input = isCv ? $('cvFile') : $('jdFile');
   const transparency = $('cvTransparency');
-  label.textContent = `Reading ${file.name} locally…`;
-  if (isCv && transparency) transparency.textContent = 'Extracting and privacy-scrubbing text + visuals inside this browser…';
+  label.textContent = `Reading ${file.name} text locally…`;
+  if (isCv && transparency) transparency.textContent = 'Reading and redacting CV text locally. Diagram/chart preparation will continue in the background.';
 
   try {
-    if (!window.MimirDocumentClient) throw new Error('Local document engine failed to load. Refresh and try again.');
-    const data = await window.MimirDocumentClient.extract(file, kind);
+    if (!window.MimirDocumentClient?.extractText) throw new Error('Local document engine failed to load. Refresh and try again.');
+    const data = await window.MimirDocumentClient.extractText(file, kind);
     const privacyWarnings = isCv ? (window.MimirPrivacy?.leakScan(data.text) || []) : [];
 
     textarea.value = data.text;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    label.textContent = `${file.name} · local only`;
 
     if (isCv) {
-      state.cvFile = file; // browser-memory provenance only; never uploaded
-      state.cvVisualAssets = data.visualAssets || [];
+      state.cvFile = file;
+      state.cvVisualAssets = [];
       state.cvDocumentIntel = data.documentIntelligence || null;
       textarea.classList.add('is-redacted');
       const totalMasked = Object.values(data.maskingReport || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+      label.textContent = `${file.name} · text ready · visuals preparing…`;
       if (transparency) {
-        const visuals = Number(data.documentIntelligence?.visualCandidatesDetected || 0);
-        transparency.innerHTML = `<strong>Basic PII redaction applied.</strong> ${totalMasked} direct identifier${totalMasked === 1 ? '' : 's'} masked locally before evaluation.${visuals ? ` ${visuals} visual candidate${visuals === 1 ? '' : 's'} inspected locally.` : ''}${privacyWarnings.length ? ` ${privacyWarnings.length} residual direct-identifier warning${privacyWarnings.length === 1 ? '' : 's'} detected; Mimir will re-mask server-side and continue.` : ''}`;
+        transparency.innerHTML = `<strong>CV text ready.</strong> ${totalMasked} direct identifier${totalMasked === 1 ? '' : 's'} masked locally.${privacyWarnings.length ? ` ${privacyWarnings.length} residual direct-identifier warning${privacyWarnings.length === 1 ? '' : 's'} will be re-masked server-side without blocking evaluation.` : ''} Diagram/chart analysis is continuing in the background.`;
       }
       renderDocumentIntel('cv', data.documentIntelligence);
       setFileRemoveVisibility('cv', true);
-      showToast('CV prepared locally. Raw CV file will not be uploaded to Mimir.');
+      showToast('CV text is ready. Visual evidence is preparing in the background.');
     } else {
-      state.jdFile = file; // browser-memory provenance only
-      state.jdVisualAssets = data.visualAssets || [];
+      state.jdFile = file;
+      state.jdVisualAssets = [];
       state.jdDocumentIntel = data.documentIntelligence || null;
       state.loadedSavedJd = null;
+      label.textContent = `${file.name} · text ready · visuals preparing…`;
       renderDocumentIntel('jd', data.documentIntelligence);
       setFileRemoveVisibility('jd', true);
       await refreshJdCacheState();
-      showToast('JD prepared locally. Only extracted content is sent for evaluation.');
+      showToast('JD text is ready. Visual evidence is preparing in the background.');
     }
     input.value = '';
+
+    const ext = file.name.toLowerCase().split('.').pop();
+    if (ext === 'txt') {
+      if (isCv) { state.cvVisualStatus = 'ready'; label.textContent = `${file.name} · local only`; }
+      else { state.jdVisualStatus = 'ready'; label.textContent = `${file.name} · local only`; }
+      return;
+    }
+
+    // Do not await this. Text becomes usable immediately; visuals prepare independently.
+    startVisualPreparation(file, kind, data);
   } catch (error) {
     label.textContent = isCv ? 'Drop CV or browse' : 'Drop JD or browse';
-    if (isCv && transparency) transparency.textContent = 'Mimir could not prepare this CV. The document itself may be unsupported or damaged.';
+    if (isCv && transparency) transparency.textContent = 'Mimir could not read this CV text. The document itself may be unsupported or damaged.';
     showError(error.message);
   }
 }
@@ -609,6 +696,16 @@ async function evaluateCandidate() {
     const jdHash = await currentJdHash();
     const structures = readStore(STORAGE.jdStructures, {});
     const cachedStructure = state.loadedSavedJd?.structuredJd || structures[jdHash]?.structuredJd || null;
+
+    // Text is ready immediately after upload. If diagram/chart preparation is still
+    // finishing, wait briefly at evaluation time instead of freezing the upload UI.
+    // A slow/failed visual never blocks the candidate evaluation.
+    if (state.cvVisualStatus === 'processing' || (!cachedStructure && state.jdVisualStatus === 'processing')) {
+      $('loadingCopy').textContent = 'Finishing background diagram/chart preparation…';
+      const visualWait = await waitForVisualPreparation({ includeJd: !cachedStructure, maxWaitMs: 8000 });
+      if (visualWait.timedOut) showToast('Visual preparation is still running. Mimir is continuing with text and any visual evidence already ready.');
+    }
+
     const payload = {
       jdText,
       cvText,

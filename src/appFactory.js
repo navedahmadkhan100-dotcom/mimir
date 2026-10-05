@@ -176,7 +176,7 @@ export function createMimirApp(options = {}) {
     res.json({
       ok: true,
       app: 'Mimir — Find the Worthy',
-      version: '4.4.1',
+      version: '4.4.3',
       architecture: 'Document Intelligence + Claim Entailment + Evidence Boundaries + Odin + Evidence Policy + Deterministic Score Lineage + Verification Intelligence',
       model: MODEL_ID,
       promptVersion: PROMPT_VERSION,

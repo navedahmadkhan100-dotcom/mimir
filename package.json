@@ -1,9 +1,9 @@
 {
   "name": "mimir-find-the-worthy",
-  "version": "4.4.2",
+  "version": "4.4.3",
   "private": true,
   "type": "module",
-  "description": "Mimir — Find the Worthy: security-hardened multimodal evidence intelligence on Render with fast practical document preparation and non-blocking PII redaction.",
+  "description": "Mimir — Find the Worthy: security-hardened multimodal evidence intelligence on Render with text-first non-blocking document preparation, background visual evidence, and practical PII redaction.",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",

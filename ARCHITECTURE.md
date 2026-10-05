@@ -1,4 +1,4 @@
-# Mimir v4.4.0 — Render Security-Hardened Reference Architecture
+# Mimir v4.4.3 — Text-First, Non-Blocking Visual Reference Architecture
 
 ```text
                          JOB DESCRIPTION
@@ -21,6 +21,8 @@ PDF / DOCX / TXT               │
       ▼                        │
 Browser Document Intelligence │
       │                        │
+      ├─ TEXT FIRST → redact → ready immediately
+      └─ VISUALS → background preparation
  ┌────┴─────┐                  │
  ▼          ▼                  │
 TEXT      VISUAL               │
@@ -36,10 +38,11 @@ LinkedIn / GitHub / IDs / references / clearance
 visual text PII / metadata / sensitive identity hints
       │
       ▼
-Leak check — fail closed
+Direct-PII masking + warning scan
       │
       ▼
 Bounded sanitized payload
+(visual timeout/failure never blocks text evaluation)
       │
       └───────────────────────┬─────────────────────────
                               ▼

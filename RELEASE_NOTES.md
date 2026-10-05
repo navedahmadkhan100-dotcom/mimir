@@ -1,3 +1,17 @@
+# Mimir v4.4.3 — Text-First / Non-Blocking Visuals
+
+- Fixes the CV upload state getting stuck on “Reading CV”.
+- Splits document preparation into two phases: text first, visuals in the background.
+- CV/JD text and practical PII redaction become ready before diagram/chart analysis finishes.
+- Native-text PDF visuals redact direct PII using PDF text coordinates; no Tesseract OCR is needed for normal selectable-text pages.
+- OCR is lazy-loaded only when needed for scanned/image-only pages or DOCX embedded images.
+- OCR and PDF operator inspection have bounded timeouts so visual processing cannot hang indefinitely.
+- Evaluation waits at most 8 seconds for in-progress visuals and then continues with text + any visual evidence already ready.
+- Visual processing errors are downgraded to visual-only warnings; they no longer make the whole CV unusable.
+- Adds cache-busting query versions for Mimir frontend assets so Render deployments do not keep stale browser JavaScript.
+- No Claim Model, Entailment, Odin, Policy, Evidence Graph, deterministic scoring, score-lineage, governance, or prompt-injection protections were removed.
+- Full regression suite: 57/57 passing; JavaScript syntax checks passing.
+
 # Mimir v4.4.1 — Practical PII / Non-Blocking Evaluation
 
 - Keeps the v4.4 security hardening, prompt-injection isolation, rate limiting, payload validation and deterministic scoring architecture.

@@ -66,8 +66,9 @@ test('runtime dependency manifest pins reviewed security-critical versions', () 
 
 test('browser uses patched Mammoth build and exact Tesseract version', () => {
   const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+  const documentClient = fs.readFileSync(path.join(root, 'public/document-client.js'), 'utf8');
   assert.match(html, /mammoth\/1\.13\.0\/mammoth\.browser\.min\.js/);
-  assert.match(html, /tesseract\.js@7\.0\.0\/dist\/tesseract\.min\.js/);
+  assert.match(documentClient, /tesseract\.js@7\.0\.0\/dist\/tesseract\.min\.js/);
 });
 
 test('server enables CSP, proxy-aware limits, origin enforcement, and JSON API 404', () => {
