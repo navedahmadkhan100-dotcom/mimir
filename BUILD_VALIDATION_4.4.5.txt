@@ -1,0 +1,10 @@
+Mimir v4.4.5 — Fast DOCX Visuals
+
+Target regression: Andrew Francis-Sylvester CV(2).docx
+- DOCX embedded media observed: 8 PNG images
+- Total embedded visual bytes: 1,153,133 bytes
+- Each visual is below the server 900,000-byte per-image limit
+- Total visual bytes are below the server 3,200,000-byte total limit
+- Therefore all 8 visuals qualify for direct no-OCR pass-through.
+
+Validation: run npm test and npm run check before packaging.

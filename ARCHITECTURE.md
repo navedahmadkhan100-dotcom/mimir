@@ -1,4 +1,4 @@
-# Mimir v4.4.3 — Text-First, Non-Blocking Visual Reference Architecture
+# Mimir v4.4.4 — Text-First, Visual-Fidelity Reference Architecture
 
 ```text
                          JOB DESCRIPTION
@@ -96,9 +96,9 @@ The official Mimir client performs document preparation before transmission:
 
 - PDF/DOCX/TXT extraction and page provenance;
 - chart/graph/architecture-diagram detection;
-- OCR-based text privacy scrubbing on approved visuals;
-- candidate identity/sensitive-attribute masking;
-- leak re-scan and fail-closed handling;
+- OCR-based direct-PII scrubbing on visuals where OCR completes;
+- candidate identity/sensitive-attribute masking in text;
+- practical non-blocking visual privacy: OCR failure is recorded but does not delete technical evidence;
 - bounded visual resizing/compression;
 - browser-local saved-JD structure cache;
 - browser-local anonymized Evidence Intelligence.

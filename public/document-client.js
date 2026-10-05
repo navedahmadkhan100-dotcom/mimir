@@ -1,18 +1,20 @@
 (function () {
   const MAX_VISUALS = 6;
-  const MAX_DOCX_VISUALS = 4;
+  const MAX_DOCX_VISUALS = 8;
   const MAX_VISUAL_EDGE = 1280;
   const JPEG_QUALITY = 0.70;
   const MAX_PDF_PAGES = 80;
   const MAX_JD_TEXT_CHARS = 150000;
   const MAX_CV_TEXT_CHARS = 250000;
   const MAX_PREPARED_VISUAL_BYTES = 800 * 1024;
+  const MAX_FAST_DOCX_VISUAL_BYTES = 820 * 1024;
+  const MAX_FAST_DOCX_TOTAL_BYTES = 2_800_000;
   const MAX_DOCX_ENTRIES = 2000;
   const MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
   const MAX_DOCX_XML_BYTES = 8 * 1024 * 1024;
   const MAX_DOCX_MEDIA_BYTES = 24 * 1024 * 1024;
   const MAX_DOCX_SINGLE_MEDIA_BYTES = 6 * 1024 * 1024;
-  const OCR_TIMEOUT_MS = 4500;
+  const OCR_TIMEOUT_MS = 3200;
   const PDF_OPERATOR_TIMEOUT_MS = 1400;
   const VISUAL_HINT = /\b(architecture|architectural|diagram|topology|workflow|flowchart|chart|graph|design|network|solution|infrastructure|schema|model|dashboard|roadmap|process|sequence|data\s+flow)\b/i;
 
@@ -182,6 +184,88 @@
     }
   }
 
+
+  function decodeXml(value='') {
+    return String(value)
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+  }
+
+  function normalizeDocxMediaTarget(target='') {
+    let clean = String(target || '').replace(/\\/g, '/').replace(/^\//, '');
+    clean = clean.replace(/^\.\//, '');
+    while (clean.startsWith('../')) clean = clean.slice(3);
+    if (clean.startsWith('word/')) return clean;
+    return `word/${clean}`.replace(/word\/word\//, 'word/');
+  }
+
+  async function docxVisualCandidates(zip) {
+    const documentEntry = zip.file('word/document.xml');
+    const relEntry = zip.file('word/_rels/document.xml.rels');
+    if (!documentEntry || !relEntry) {
+      return Object.keys(zip.files)
+        .filter((name)=>/^word\/media\//.test(name) && !zip.files[name].dir)
+        .map((target,index)=>({ target, sourceHint:`DOCX embedded visual ${index+1}`, nearbyText:'' }));
+    }
+
+    const [docXml, relXml] = await Promise.all([documentEntry.async('string'), relEntry.async('string')]);
+    const rels = new Map();
+    for (const match of relXml.matchAll(/<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bTarget="([^"]+)"[^>]*>/g)) {
+      const [, id, target] = match;
+      if (/media\//i.test(target)) rels.set(id, normalizeDocxMediaTarget(target));
+    }
+
+    const paragraphs = [...docXml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/g)].map((match) => {
+      const xml = match[0];
+      const text = [...xml.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)]
+        .map((m)=>decodeXml(m[1]))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const relIds = [...xml.matchAll(/r:(?:embed|id)="([^"]+)"/g)].map((m)=>m[1]);
+      return { text, relIds };
+    });
+
+    const candidates = [];
+    const seen = new Set();
+    for (let index=0; index<paragraphs.length; index+=1) {
+      for (const relId of paragraphs[index].relIds) {
+        const target = rels.get(relId);
+        if (!target || seen.has(target) || !zip.file(target)) continue;
+        seen.add(target);
+        const nearbyText = paragraphs
+          .slice(Math.max(0,index-2), Math.min(paragraphs.length,index+3))
+          .map((p)=>p.text)
+          .filter(Boolean)
+          .join(' | ')
+          .slice(0,2200);
+        candidates.push({ target, nearbyText, sourceHint:`DOCX embedded visual ${candidates.length+1}` });
+      }
+    }
+
+    // Some Word producers place images in the media folder without a normal paragraph relationship.
+    // Keep them as a fallback after the document-order candidates so diagrams are not silently lost.
+    for (const target of Object.keys(zip.files).filter((name)=>/^word\/media\//.test(name) && !zip.files[name].dir)) {
+      if (seen.has(target)) continue;
+      seen.add(target);
+      candidates.push({ target, nearbyText:'', sourceHint:`DOCX embedded visual ${candidates.length+1}` });
+    }
+    return candidates;
+  }
+
+  function imageBitmapCanvas(img) {
+    const longest = Math.max(img.width, img.height);
+    const scale = longest > MAX_VISUAL_EDGE ? MAX_VISUAL_EDGE / longest : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
   function docIntelBase(format, textChars, pageCount = null, supportsVisuals = false) {
     return {
       format,
@@ -322,77 +406,121 @@
   }
 
   async function extractDocxText(file, kind) {
-    const { buffer } = await loadDocx(file);
-    const rawText = (await mammoth.extractRawText({ arrayBuffer:buffer })).value || '';
+    const { buffer, zip } = await loadDocx(file);
+    const [rawResult, candidates] = await Promise.all([
+      mammoth.extractRawText({ arrayBuffer:buffer }),
+      docxVisualCandidates(zip),
+    ]);
+    const rawText = rawResult.value || '';
     const maxTextChars = kind === 'jd' ? MAX_JD_TEXT_CHARS : MAX_CV_TEXT_CHARS;
     if (rawText.length > maxTextChars) throw new Error(`DOCX contains too much extracted text to process safely (maximum ${maxTextChars.toLocaleString()} characters).`);
     const masked = window.MimirPrivacy.mask(rawText, kind);
+    const candidateCount = candidates.length;
     return {
       text:masked.maskedText,
       maskingReport:masked.report,
       visualAssets:[],
-      documentIntelligence:docIntelBase('docx', rawText.length, null, true),
-      _visualContext:{ rawText },
+      documentIntelligence:{
+        ...docIntelBase('docx', rawText.length, null, candidateCount > 0),
+        visualCandidatesDetected:candidateCount,
+        mode:candidateCount ? 'text+visual' : 'text-only',
+        visualStatus:candidateCount ? 'preparing' : 'none',
+        notes:candidateCount ? [`${candidateCount} embedded visual candidate${candidateCount === 1 ? '' : 's'} detected immediately; preparation continues in the background.`] : [],
+      },
+      _visualContext:{ rawText, docxVisualCandidates:candidates, zip },
     };
   }
 
-  async function prepareDocxVisuals(file, kind, textData, onAsset) {
-    const { zip } = await loadDocx(file);
-    const rawText = textData?._visualContext?.rawText || '';
-    const names = Object.keys(zip.files).filter((n)=>/^word\/media\//.test(n) && !zip.files[n].dir).slice(0,MAX_DOCX_VISUALS*2);
-    const assets = [];
-    let withheld = 0;
-    let ocrWorker = null;
-    try {
-      for (const name of names) {
-        if (assets.length >= MAX_DOCX_VISUALS) break;
-        const blob = await zip.files[name].async('blob');
-        const img = await createImageBitmap(blob);
-        if (img.width < 220 || img.height < 120) { img.close(); withheld += 1; continue; }
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        canvas.getContext('2d').drawImage(img,0,0);
-        img.close();
+  function mimeTypeForDocxMedia(target='') {
+    const ext = String(target || '').toLowerCase().split('.').pop();
+    if (ext === 'png') return 'image/png';
+    if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+    if (ext === 'webp') return 'image/webp';
+    return null;
+  }
 
-        if (kind === 'cv') {
-          if (!ocrWorker) { const Tesseract = await getTesseract(); ocrWorker = await Tesseract.createWorker('eng'); }
-          const scrub = await scrubCanvas(canvas, rawText, ocrWorker);
-          const words = String(scrub.ocrText || '').trim().split(/\s+/).filter(Boolean);
-          // Failed/slow OCR withholds only this visual. It never blocks the CV text channel.
-          if (!scrub.ok || (words.length < 4 && !VISUAL_HINT.test(scrub.ocrText || ''))) {
-            withheld += 1;
-            if (scrub.timedOut) { await ocrWorker?.terminate?.(); ocrWorker = null; }
-            continue;
-          }
+  async function prepareDocxVisuals(file, kind, textData, onAsset) {
+    const zip = textData?._visualContext?.zip || (await loadDocx(file)).zip;
+    const detectedCandidates = textData?._visualContext?.docxVisualCandidates || await docxVisualCandidates(zip);
+    const candidates = detectedCandidates.slice(0, MAX_DOCX_VISUALS);
+    const assets = [];
+    let withheld = Math.max(0, detectedCandidates.length - candidates.length);
+    let preparedBytes = 0;
+
+    // Practical PII mode deliberately keeps DOCX technical visuals off the OCR path.
+    // OCR was the source of multi-minute stalls on architecture-heavy CVs. Candidate
+    // identity/contact details are still redacted from the extracted CV text before any
+    // server/model call. Embedded visuals are passed through directly when already inside
+    // the server's image budget, and only oversized images are decoded/compressed.
+    for (const candidate of candidates) {
+      const entry = zip.file(candidate.target);
+      if (!entry) { withheld += 1; continue; }
+
+      try {
+        const blob = await entry.async('blob');
+        const originalMime = mimeTypeForDocxMedia(candidate.target);
+        let enc = null;
+        let origin = 'browser-docx-embedded-fastpath';
+
+        if (originalMime && blob.size <= MAX_FAST_DOCX_VISUAL_BYTES && (preparedBytes + blob.size) <= MAX_FAST_DOCX_TOTAL_BYTES) {
+          enc = {
+            base64:dataUrlToBase64(await blobDataUrl(blob)),
+            mimeType:originalMime,
+            width:null,
+            height:null,
+            byteSize:blob.size,
+          };
+        } else {
+          // Rare fallback for unusually large/unsupported embedded images. This path does
+          // image decoding + compression only; it never invokes OCR.
+          let img;
+          try { img = await createImageBitmap(blob); }
+          catch { withheld += 1; continue; }
+          if (img.width < 180 || img.height < 90) { img.close(); withheld += 1; continue; }
+          const canvas = imageBitmapCanvas(img);
+          img.close();
+          const compressed = await canvasJpeg(canvas);
+          const approxBytes = Math.floor((compressed.base64.length * 3) / 4);
+          enc = { ...compressed, byteSize:approxBytes };
+          origin = 'browser-docx-embedded-compressed';
         }
 
-        const enc = await canvasJpeg(canvas);
+        const nextBytes = Number(enc.byteSize || 0);
+        if ((preparedBytes + nextBytes) > 3_000_000) { withheld += 1; continue; }
+        preparedBytes += nextBytes;
         const asset = {
           id:`${kind==='cv'?'CV':'JD'}-V${assets.length+1}`,
-          ...enc,
+          base64:enc.base64,
+          mimeType:enc.mimeType,
+          width:enc.width,
+          height:enc.height,
           sourcePage:null,
-          sourceHint:`DOCX embedded visual ${assets.length+1}`,
-          nearbyText:'',
-          origin:'browser-docx-embedded',
+          sourceHint:candidate.sourceHint || `DOCX embedded visual ${assets.length+1}`,
+          nearbyText:window.MimirPrivacy.mask(candidate.nearbyText || '', kind).maskedText,
+          origin,
+          privacyScrubStatus:kind === 'cv' ? 'text-pii-only-practical-mode' : 'not-required',
         };
         assets.push(asset);
-        onAsset?.(asset, assets.length);
+        onAsset?.(asset, assets.length, detectedCandidates.length);
+      } catch {
+        withheld += 1;
       }
-    } finally {
-      await ocrWorker?.terminate?.();
     }
 
     return {
       visualAssets:assets,
       documentIntelligence:{
-        ...docIntelBase('docx', textData?.documentIntelligence?.nativeTextCharacters || 0, null, true),
-        visualCandidatesDetected:names.length,
+        ...docIntelBase('docx', textData?.documentIntelligence?.nativeTextCharacters || 0, null, detectedCandidates.length > 0),
+        visualCandidatesDetected:detectedCandidates.length,
         visualAssetsPrepared:assets.length,
         visualAssetsWithheld:withheld,
-        mode:assets.length?'text+visual':'text-only',
+        visualPrivacyWarnings:0,
+        mode:assets.length?'text+visual':(detectedCandidates.length ? 'text+visual-pending' : 'text-only'),
         visualStatus:'ready',
-        notes:['Embedded visuals are prepared in the background. OCR timeout/failure withholds only the affected visual and never blocks CV readiness.'],
+        notes:[
+          'DOCX visuals are discovered in document order from Word relationships rather than ZIP entry order.',
+          'DOCX technical visuals use a no-OCR fast path in Practical PII mode so diagram evidence is available immediately; direct CV text identifiers remain redacted locally.',
+        ],
       },
     };
   }
@@ -434,6 +562,6 @@
     extract,
     extractText,
     prepareVisuals,
-    version:'browser-document-intelligence-2.6.0-text-first-background-visuals',
+    version:'browser-document-intelligence-2.8.0-fast-docx-visuals',
   };
 })();

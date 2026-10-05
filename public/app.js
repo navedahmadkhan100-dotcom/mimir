@@ -291,7 +291,9 @@ function renderDocumentIntel(kind, intel = null) {
   if (withheld) bits.push(`${withheld} withheld by privacy gate`);
   const mode = detected > 0 ? 'Text + visual document' : 'Text-only document';
   const privacy = kind === 'cv' && Number(intel.visualCandidatesDetected || 0) > 0
-    ? 'Visuals are privacy-scrubbed locally before model analysis.'
+    ? (intel.format === 'docx'
+      ? 'Direct CV text identifiers are redacted locally; DOCX technical visuals use the fast no-OCR path in Practical PII mode.'
+      : 'Visuals are privacy-scrubbed locally before model analysis.')
     : kind === 'jd' && Number(intel.visualCandidatesDetected || 0) > 0
       ? 'JD diagrams/charts will be included on the first evaluation.'
       : 'No substantive visual artefacts detected.';
@@ -315,9 +317,20 @@ async function startVisualPreparation(file, kind, textData) {
   state[assetsKey] = [];
 
   const preparation = window.MimirDocumentClient.prepareVisuals(file, kind, textData, {
-    onAsset: (asset) => {
+    onAsset: (asset, preparedCount = null, detectedCount = null) => {
       if (state[generationKey] !== generation) return;
       if (!state[assetsKey].some((item) => item.id === asset.id)) state[assetsKey].push(asset);
+      const prepared = Number(preparedCount || state[assetsKey].length || 0);
+      const detected = Number(detectedCount || state[intelKey]?.visualCandidatesDetected || prepared);
+      state[intelKey] = {
+        ...(state[intelKey] || {}),
+        visualCandidatesDetected:detected,
+        visualAssetsPrepared:prepared,
+        mode:prepared > 0 ? 'text+visual' : (detected > 0 ? 'text+visual-pending' : 'text-only'),
+        visualStatus:'preparing',
+      };
+      label.textContent = `${file.name} · text ready · visuals ${prepared}/${detected} prepared…`;
+      renderDocumentIntel(kind, state[intelKey]);
     },
   }).then((visualData) => {
     if (state[generationKey] !== generation) return null;
@@ -351,7 +364,7 @@ async function startVisualPreparation(file, kind, textData) {
   return preparation;
 }
 
-async function waitForVisualPreparation({ includeJd = true, maxWaitMs = 8000 } = {}) {
+async function waitForVisualPreparation({ includeJd = true, maxWaitMs = 6000 } = {}) {
   const pending = [];
   if (state.cvVisualStatus === 'processing' && state.cvVisualPromise) pending.push(state.cvVisualPromise);
   if (includeJd && state.jdVisualStatus === 'processing' && state.jdVisualPromise) pending.push(state.jdVisualPromise);
@@ -391,9 +404,12 @@ async function extractFileToTextarea(file, kind) {
       state.cvDocumentIntel = data.documentIntelligence || null;
       textarea.classList.add('is-redacted');
       const totalMasked = Object.values(data.maskingReport || {}).reduce((sum, value) => sum + Number(value || 0), 0);
-      label.textContent = `${file.name} · text ready · visuals preparing…`;
+      const detectedVisuals = Number(data.documentIntelligence?.visualCandidatesDetected || 0);
+      label.textContent = detectedVisuals
+        ? `${file.name} · text ready · ${detectedVisuals} visuals detected · preparing…`
+        : `${file.name} · text ready · no embedded visuals detected`;
       if (transparency) {
-        transparency.innerHTML = `<strong>CV text ready.</strong> ${totalMasked} direct identifier${totalMasked === 1 ? '' : 's'} masked locally.${privacyWarnings.length ? ` ${privacyWarnings.length} residual direct-identifier warning${privacyWarnings.length === 1 ? '' : 's'} will be re-masked server-side without blocking evaluation.` : ''} Diagram/chart analysis is continuing in the background.`;
+        transparency.innerHTML = `<strong>CV text ready.</strong> ${totalMasked} direct identifier${totalMasked === 1 ? '' : 's'} masked locally.${privacyWarnings.length ? ` ${privacyWarnings.length} residual direct-identifier warning${privacyWarnings.length === 1 ? '' : 's'} will be re-masked server-side without blocking evaluation.` : ''}${detectedVisuals ? ` ${detectedVisuals} diagram/chart visual${detectedVisuals === 1 ? '' : 's'} detected and being prepared on the fast path.` : ''}`;
       }
       renderDocumentIntel('cv', data.documentIntelligence);
       setFileRemoveVisibility('cv', true);
@@ -403,7 +419,10 @@ async function extractFileToTextarea(file, kind) {
       state.jdVisualAssets = [];
       state.jdDocumentIntel = data.documentIntelligence || null;
       state.loadedSavedJd = null;
-      label.textContent = `${file.name} · text ready · visuals preparing…`;
+      const detectedVisuals = Number(data.documentIntelligence?.visualCandidatesDetected || 0);
+      label.textContent = detectedVisuals
+        ? `${file.name} · text ready · ${detectedVisuals} visuals detected · preparing…`
+        : `${file.name} · text ready · no embedded visuals detected`;
       renderDocumentIntel('jd', data.documentIntelligence);
       setFileRemoveVisibility('jd', true);
       await refreshJdCacheState();
@@ -702,8 +721,12 @@ async function evaluateCandidate() {
     // A slow/failed visual never blocks the candidate evaluation.
     if (state.cvVisualStatus === 'processing' || (!cachedStructure && state.jdVisualStatus === 'processing')) {
       $('loadingCopy').textContent = 'Finishing background diagram/chart preparation…';
-      const visualWait = await waitForVisualPreparation({ includeJd: !cachedStructure, maxWaitMs: 8000 });
-      if (visualWait.timedOut) showToast('Visual preparation is still running. Mimir is continuing with text and any visual evidence already ready.');
+      const visualWait = await waitForVisualPreparation({ includeJd: !cachedStructure, maxWaitMs: 6000 });
+      if (visualWait.timedOut) {
+        const ready = Number(state.cvVisualAssets?.length || 0);
+        const detected = Number(state.cvDocumentIntel?.visualCandidatesDetected || 0);
+        showToast(`Visual preparation is still running. Mimir is continuing with ${ready}/${detected} CV visuals already ready rather than dropping the entire visual channel.`);
+      }
     }
 
     const payload = {

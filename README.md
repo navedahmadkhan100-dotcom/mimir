@@ -1,4 +1,4 @@
-# Mimir — Find the Worthy v4.4.3
+# Mimir — Find the Worthy v4.4.4
 
 ## Evidence-Based Intelligent Engine · Text-First Document Pipeline · Background Visual Evidence
 
@@ -45,12 +45,13 @@ See:
 
 This build is security-hardened, not claimed to be unhackable or independently penetration-tested. PII redaction intentionally favors evaluation continuity over aggressive heuristic blocking: obvious direct identifiers are redacted, but ambiguous names/locations/company context will not stop an evaluation.
 
-## v4.4.3 document behavior
+## v4.4.4 document behavior
 
 - CV/JD text is extracted and PII-redacted first.
 - The textarea becomes ready immediately after text extraction.
 - Diagram/chart detection and preparation continues in the background.
 - Native-text PDF visuals use PDF text coordinates for direct PII masking instead of OCR.
 - OCR is lazy-loaded only for scanned/image-only PDF pages and DOCX embedded images.
-- OCR has a bounded timeout; a slow visual can be withheld without blocking the candidate evaluation.
-- If Evaluate is clicked while visuals are still preparing, Mimir waits at most 8 seconds, then continues with text plus any visual evidence already ready.
+- DOCX visual candidates are counted immediately in Word document order; up to eight embedded diagrams can be prepared.
+- DOCX images are downscaled before OCR. OCR is a best-effort visual PII scrub and no longer determines whether a technical diagram is retained.
+- If Evaluate is clicked while visuals are still preparing, Mimir waits up to 14 seconds, then continues with every visual already prepared while remaining preparation stays non-blocking.

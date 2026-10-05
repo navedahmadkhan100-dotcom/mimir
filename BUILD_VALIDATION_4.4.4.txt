@@ -1,0 +1,14 @@
+Mimir v4.4.4 — DOCX Visual Fidelity Restored
+
+Automated architecture/regression suite: 58/58 PASS
+JavaScript syntax check: PASS
+
+Reference DOCX validation performed against the CV supplied in the conversation:
+- 44k+ extracted text characters
+- 8 embedded PNG media assets present in the DOCX package
+- 8/8 mapped through Word document relationships in document order
+- all 8 exceed the substantive-image size threshold
+- candidate count is available during text extraction (before OCR)
+- OCR timeout/failure no longer deletes a qualifying technical visual
+
+Important: the exact final candidate score was not reproduced because the matching JD was not supplied with this validation run. v4.4.4 fixes the missing visual evidence channel; it does not force a target score.
