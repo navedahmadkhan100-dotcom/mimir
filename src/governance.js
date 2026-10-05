@@ -36,6 +36,8 @@ export function buildGovernancePacket({ audit, claimAssessments = [], odinChalle
       candidate_identity_required_for_scoring:false,
       client_privacy_boundary:true,
       server_defense_in_depth_masking:true,
+      redaction_mode:'practical_nonblocking',
+      heuristic_privacy_matches_block_evaluation:false,
       raw_candidate_stored:false,
     },
   };

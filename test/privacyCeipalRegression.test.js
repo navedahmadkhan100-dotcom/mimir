@@ -24,10 +24,12 @@ test('ordinary Teams language is not treated as a social handle', () => {
   assert.match(result.maskedText, /teams and vendors/i);
 });
 
-test('employer pseudonymisation preserves role dates', () => {
+test('practical privacy retains employer/job-history evidence and preserves role dates', () => {
   const result = maskCandidateText(SAMPLE);
-  assert.match(result.maskedText, /Project Management \/ Service Delivery at Employer \d+\s+January 2025–Present/);
+  assert.match(result.maskedText, /INFOMATRIX SOLUTIONS/);
+  assert.match(result.maskedText, /SKECHERS USA, INC\./);
+  assert.match(result.maskedText, /\bARUP\b/);
+  assert.match(result.maskedText, /January 2025–Present/);
   assert.match(result.maskedText, /August 2023\s+–\s+December 2024/);
   assert.match(result.maskedText, /September 2021–December 2022/);
-  assert.doesNotMatch(result.maskedText, /INFOMATRIX SOLUTIONS|SKECHERS USA|\bARUP\b/);
 });

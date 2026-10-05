@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { sha256, normalizeForHash, stableStringify } from './hash.js';
 import { maskCandidateText, maskJdText, collectCandidateSensitiveTerms } from './mask.js';
-import { coldPrompt, warmPrompt, PROMPT_VERSION } from './prompt.js';
+import { structureJdPrompt, warmPrompt, PROMPT_VERSION, JD_STRUCTURE_PROMPT_VERSION } from './prompt.js';
 import { MODEL_ID } from './gemini.js';
 import { AIGateway, AI_GATEWAY_VERSION } from './aiGateway.js';
 import { validateAndSanitizeModelOutput, validateStructuredJd } from './postprocess.js';
@@ -20,6 +20,13 @@ import { buildGovernancePacket, GOVERNANCE_VERSION } from './governance.js';
 import { buildEvidenceGraph, EVIDENCE_GRAPH_VERSION } from './evidenceGraph.js';
 import { auditStructuredJd, JD_AUDIT_VERSION } from './jdAudit.js';
 import { buildDocx, buildPdf } from './reports.js';
+import {
+  SECURITY_VERSION,
+  assertEvaluationTextLimits,
+  decodePreparedVisualAssets,
+  assertExportReport,
+  isAllowedOrigin,
+} from './security.js';
 
 function safeFilename(value = 'report') {
   return String(value)
@@ -41,6 +48,18 @@ function parseStructuredJd(value) {
   }
 }
 
+function canonicalizeStructuredJd(value) {
+  const validation = validateStructuredJd(value);
+  if (!validation.ok) throw new Error(`JD structure is invalid: ${validation.error}`);
+  return {
+    ...validation.value,
+    requirements: (validation.value.requirements || []).map((requirement, index) => ({
+      ...requirement,
+      id: `R${index + 1}`,
+    })),
+  };
+}
+
 export function createMimirApp(options = {}) {
   const deployment = String(options.deployment || process.env.MIMIR_DEPLOYMENT || 'server');
   const isLambda = deployment === 'aws-lambda' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
@@ -50,9 +69,12 @@ export function createMimirApp(options = {}) {
 
   const app = express();
   app.disable('x-powered-by');
+  // Render terminates TLS in front of the Node process. Trust exactly one proxy hop so req.ip
+  // and rate limiting use the real client address rather than the Render proxy address.
+  app.set('trust proxy', 1);
 
-  // Split-deployment CORS: the static frontend lives on Netlify while the API
-  // runs on AWS Lambda. Restrict browser access to Mimir origins.
+  // Browser-origin policy. Render serves the official frontend and API from the
+  // same service; configured custom origins are also allowed for controlled moves.
   const allowedOrigins = new Set(
     String(process.env.ALLOWED_ORIGINS || 'https://mimir.co.in,https://www.mimir.co.in')
       .split(',')
@@ -61,31 +83,92 @@ export function createMimirApp(options = {}) {
   );
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && (allowedOrigins.has(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+    if (origin && isAllowedOrigin(origin, req, allowedOrigins)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     }
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    if (req.method === 'OPTIONS') {
+      if (origin && !isAllowedOrigin(origin, req, allowedOrigins)) return res.sendStatus(403);
+      return res.sendStatus(204);
+    }
     return next();
   });
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-  // Lambda synchronous invocations have a hard 6 MB payload ceiling. The browser
-  // keeps evaluation payloads below 4.7 MB; the lower Express limit is defense in depth.
-  app.use(express.json({ limit: isLambda ? '5mb' : '20mb' }));
-  app.use(express.urlencoded({ extended: true, limit: isLambda ? '5mb' : '4mb' }));
-  // The default express-rate-limit memory store is per-process and therefore not a
-  // trustworthy global limiter on Lambda. Keep it for local/container deployments only.
-  if (!isLambda || String(process.env.ENABLE_LAMBDA_MEMORY_RATE_LIMIT || '').toLowerCase() === 'true') {
-    app.use(rateLimit({
-      windowMs: 60 * 1000,
-      limit: 80,
-      standardHeaders: true,
-      legacyHeaders: false,
-    }));
-  }
-  if (serveFrontend) app.use(express.static(path.resolve(process.cwd(), 'public')));
+
+  app.use(helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        formAction: ["'self'"],
+        scriptSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
+        scriptSrcAttr: ["'none'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net', 'https://tessdata.projectnaptha.com'],
+        workerSrc: ["'self'", 'blob:', 'https://cdnjs.cloudflare.com', 'https://cdn.jsdelivr.net'],
+      },
+    },
+  }));
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+    next();
+  });
+
+  // Keep API bodies well below the memory envelope of a free Render instance. Official
+  // Mimir clients already target a 4.7 MB evaluation payload.
+  app.use(express.json({ limit: '6mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '256kb', parameterLimit: 200 }));
+
+  // Static assets are not expensive API operations and should not consume evaluation quotas.
+  if (serveFrontend) app.use(express.static(path.resolve(process.cwd(), 'public'), {
+    etag: true,
+    maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html') || filePath.endsWith('config.js')) res.setHeader('Cache-Control', 'no-cache');
+    },
+  }));
+
+  const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 120,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    skip: (req) => req.path === '/health',
+  });
+  const evaluationLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many evaluations from this network. Please wait a minute and retry.' },
+  });
+  const exportLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 20,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Too many report exports. Please wait a minute and retry.' },
+  });
+
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, private, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    const origin = req.headers.origin;
+    const fetchSite = String(req.headers['sec-fetch-site'] || '').toLowerCase();
+    if (fetchSite === 'cross-site') return res.status(403).json({ error: 'Cross-site API requests are not allowed.' });
+    if (origin && !isAllowedOrigin(origin, req, allowedOrigins)) return res.status(403).json({ error: 'Origin is not allowed.' });
+    return next();
+  });
+  app.use('/api', apiLimiter);
+  app.use('/api/evaluate', evaluationLimiter);
+  app.use('/api/export', exportLimiter);
+
 
   const extractor = () => new AIGateway(process.env);
 
@@ -93,10 +176,11 @@ export function createMimirApp(options = {}) {
     res.json({
       ok: true,
       app: 'Mimir — Find the Worthy',
-      version: '4.3.0',
+      version: '4.4.1',
       architecture: 'Document Intelligence + Claim Entailment + Evidence Boundaries + Odin + Evidence Policy + Deterministic Score Lineage + Verification Intelligence',
       model: MODEL_ID,
       promptVersion: PROMPT_VERSION,
+      jdStructurePromptVersion: JD_STRUCTURE_PROMPT_VERSION,
       scoringVersion: SCORING_VERSION,
       claimModelVersion: CLAIM_MODEL_VERSION,
       evidenceSemanticsVersion: EVIDENCE_SEMANTICS_VERSION,
@@ -108,6 +192,7 @@ export function createMimirApp(options = {}) {
       aiGatewayVersion: AI_GATEWAY_VERSION,
       evidenceGraphVersion: EVIDENCE_GRAPH_VERSION,
       jdAuditVersion: JD_AUDIT_VERSION,
+      securityVersion: SECURITY_VERSION,
       referenceYear: REFERENCE_YEAR,
       persistence: 'browser-local-only',
       deployment,
@@ -129,28 +214,22 @@ export function createMimirApp(options = {}) {
       const cvRaw = String(req.body.cvText || '').trim();
       if (!req.body?.privacy?.clientPrepared) return res.status(400).json({ error: 'Client privacy preparation is required.' });
 
-      const decodeAssets = (items = [], prefix = 'CV') => (Array.isArray(items) ? items : []).slice(0, 8).map((asset, index) => ({
-        id: String(asset.id || `${prefix}-V${index + 1}`),
-        buffer: Buffer.from(String(asset.base64 || ''), 'base64'),
-        mimeType: String(asset.mimeType || 'image/jpeg'),
-        sourcePage: asset.sourcePage || null,
-        sourceHint: String(asset.sourceHint || ''),
-        nearbyText: String(asset.nearbyText || ''),
-        origin: String(asset.origin || 'browser-prepared'),
-        hash: sha256(String(asset.base64 || '')),
-      })).filter((asset) => asset.buffer.length > 0);
-      const jdVisualAssets = cachedStructuredJd ? [] : decodeAssets(req.body.jdVisualAssets, 'JD');
-      const cvVisualAssets = decodeAssets(req.body.cvVisualAssets, 'CV');
-      const visualAssets = [...jdVisualAssets, ...cvVisualAssets];
+      assertEvaluationTextLimits({ jdText: jdRaw, cvText: cvRaw, structuredJd: cachedStructuredJd });
+      const decodedVisuals = decodePreparedVisualAssets({
+        jdVisualAssets: cachedStructuredJd ? [] : req.body.jdVisualAssets,
+        cvVisualAssets: req.body.cvVisualAssets,
+      }).map((asset) => ({ ...asset, hash: sha256(asset.base64) }));
+      const jdVisualAssets = decodedVisuals.filter((asset) => asset.documentKind === 'JD');
+      const cvVisualAssets = decodedVisuals.filter((asset) => asset.documentKind === 'CV');
+      const visualAssets = decodedVisuals;
       if (!cachedStructuredJd && !jdRaw) return res.status(400).json({ error: 'Job description is required.' });
       if (!cvRaw && !cvVisualAssets.length) return res.status(400).json({ error: 'Candidate CV is required.' });
 
-      // Defense in depth only: browser is the privacy boundary; server re-masks received text and blocks residual direct identifiers.
+      // Practical PII mode: browser performs basic redaction and the server repeats
+      // deterministic masking as defense in depth. Residual detections are audit
+      // warnings only; heuristic privacy guesses must never stop an evaluation.
       const cvMasked = maskCandidateText(cvRaw);
       const residualSensitiveTerms = collectCandidateSensitiveTerms(cvMasked.maskedText);
-      if (residualSensitiveTerms.length) {
-        return res.status(400).json({ error: 'Privacy firewall blocked evaluation because candidate-sensitive data may remain after redaction.' });
-      }
       const jdMasked = jdRaw ? maskJdText(jdRaw) : { maskedText: '', report: {} };
 
       const jdVisualSignature = jdVisualAssets.map((asset) => asset.hash).join('|');
@@ -162,13 +241,19 @@ export function createMimirApp(options = {}) {
         ? String(req.body.jdHash || sha256(stableStringify(cachedStructuredJd)))
         : sha256(`${normalizeForHash(jdMasked.maskedText)}|visual:${jdVisualSignature}`);
 
-      const prompt = cachedStructuredJd
-        ? warmPrompt(cachedStructuredJd, cvMasked.maskedText)
-        : coldPrompt(jdMasked.maskedText, cvMasked.maskedText);
+      // Security boundary: freeze the JD before the candidate CV is ever shown to the model.
+      // This prevents candidate-controlled prompt injection from rewriting first-run job requirements.
+      const gateway = extractor();
+      let jdStructureRun = null;
+      let structuredJd = cachedStructuredJd;
+      if (!structuredJd) {
+        jdStructureRun = await gateway.structureJd(structureJdPrompt(jdMasked.maskedText), jdVisualAssets);
+        structuredJd = canonicalizeStructuredJd(jdStructureRun.json);
+      }
 
-      const llm = await extractor().evaluate(prompt, visualAssets);
-      const sanitized = validateAndSanitizeModelOutput(llm.json, cvMasked.maskedText, cachedStructuredJd, cvVisualAssets);
-      const structuredJd = cachedStructuredJd || sanitized.structured_jd;
+      const prompt = warmPrompt(structuredJd, cvMasked.maskedText);
+      const llm = await gateway.evaluate(prompt, cvVisualAssets);
+      const sanitized = validateAndSanitizeModelOutput(llm.json, cvMasked.maskedText, structuredJd, cvVisualAssets);
       const jdAudit = auditStructuredJd(structuredJd);
 
       // Mimir Evidence Intelligence pipeline. The model extracts semantics; deterministic code decides what the evidence is permitted to establish.
@@ -193,6 +278,7 @@ export function createMimirApp(options = {}) {
         visualAssetHashes: visualAssets.map((asset) => asset.hash),
         model: MODEL_ID,
         promptVersion: PROMPT_VERSION,
+        jdStructurePromptVersion: JD_STRUCTURE_PROMPT_VERSION,
         scoringVersion: SCORING_VERSION,
         claimModelVersion: CLAIM_MODEL_VERSION,
         evidenceSemanticsVersion: EVIDENCE_SEMANTICS_VERSION,
@@ -202,6 +288,7 @@ export function createMimirApp(options = {}) {
         aiGatewayVersion: AI_GATEWAY_VERSION,
         evidenceGraphVersion: EVIDENCE_GRAPH_VERSION,
         jdAuditVersion: JD_AUDIT_VERSION,
+        securityVersion: SECURITY_VERSION,
         referenceYear: REFERENCE_YEAR,
       }));
       const auditId = `MIMIR-${evaluationHash.slice(0, 12).toUpperCase()}`;
@@ -211,6 +298,7 @@ export function createMimirApp(options = {}) {
         evaluationHash,
         model: MODEL_ID,
         promptVersion: PROMPT_VERSION,
+        jdStructurePromptVersion: JD_STRUCTURE_PROMPT_VERSION,
         scoringVersion: SCORING_VERSION,
         claimModelVersion: CLAIM_MODEL_VERSION,
         evidenceSemanticsVersion: EVIDENCE_SEMANTICS_VERSION,
@@ -222,20 +310,26 @@ export function createMimirApp(options = {}) {
         aiGatewayVersion: AI_GATEWAY_VERSION,
         evidenceGraphVersion: EVIDENCE_GRAPH_VERSION,
         jdAuditVersion: JD_AUDIT_VERSION,
+        securityVersion: SECURITY_VERSION,
         scoringReferenceYear: REFERENCE_YEAR,
         generatedAt: new Date().toISOString(),
         aiProvider: llm.provider || 'gemini',
         geminiInteractionId: llm.interactionId,
-        usage: llm.usage,
+        jdStructureInteractionId: jdStructureRun?.interactionId || null,
+        usage: { jdStructure: jdStructureRun?.usage || null, evaluation: llm.usage || null },
         rawCandidateStored: false,
         serverDatabaseUsed: false,
         modelStoreEnabled: false,
         warmStructuredJdUsed: Boolean(cachedStructuredJd),
+        jdStructuredBeforeCandidate: true,
         multimodalInputUsed: visualAssets.length > 0,
         visualPrivacyGate: 'browser-side extraction + privacy scrub; unsafe assets withheld before transmission',
         clientPrivacyFirewallVersion: req.body.privacy?.firewallVersion || 'unknown',
         clientDocumentEngineVersion: req.body.privacy?.documentEngineVersion || 'unknown',
         payloadBudgetVisualsWithheld: Number(req.body.privacy?.payloadBudgetVisualsWithheld || 0),
+        privacyMode: req.body.privacy?.mode || 'practical',
+        clientPrivacyWarnings: Array.isArray(req.body.privacy?.warnings) ? req.body.privacy.warnings.slice(0, 20) : [],
+        serverPrivacyWarnings: residualSensitiveTerms.slice(0, 20),
         requestContentLength: Number(req.headers['content-length'] || 0) || null,
       };
       const evidenceIntelligence = buildEvidenceIntelligenceRecord({ auditId, structuredJd, claimAssessments, evidenceSemantics, policyDecisions });
@@ -274,23 +368,21 @@ export function createMimirApp(options = {}) {
         audit,
         scoringMeta: score.scoringMeta,
         maskingReport: { jd: jdMasked.report, cv: cvMasked.report },
+        privacyWarnings: { client: audit.clientPrivacyWarnings, server: audit.serverPrivacyWarnings },
       };
 
       return res.json(packet);
     } catch (error) {
       console.error('[Mimir evaluation error]', error?.stack || error?.message || error);
       const message = error?.message || 'Evaluation failed.';
-      const clientError = /required|invalid|unsupported|unable to extract|schema|document|visual/i.test(message);
+      const clientError = /required|invalid|unsupported|unable to extract|schema|document|visual|too large|exceeds|too many|safety|payload/i.test(message);
       return res.status(clientError ? 400 : 500).json({ error: message });
     }
   });
 
   app.post('/api/export/pdf', async (req, res) => {
     try {
-      const report = req.body?.report;
-      if (!report?.auditId || !Array.isArray(report?.breakdownTable)) {
-        return res.status(400).json({ error: 'A valid Mimir report is required.' });
-      }
+      const report = assertExportReport(req.body?.report);
       const buffer = await buildPdf(report);
       const name = safeFilename(report.structuredJd?.role_title || 'mimir-report');
       res.setHeader('Content-Type', 'application/pdf');
@@ -298,16 +390,13 @@ export function createMimirApp(options = {}) {
       return res.send(buffer);
     } catch (error) {
       console.error('[Mimir PDF export error]', error);
-      return res.status(500).json({ error: 'Unable to create PDF report.' });
+      return res.status(/valid|too many|too large/i.test(error?.message || '') ? 400 : 500).json({ error: /valid|too many|too large/i.test(error?.message || '') ? error.message : 'Unable to create PDF report.' });
     }
   });
 
   app.post('/api/export/docx', async (req, res) => {
     try {
-      const report = req.body?.report;
-      if (!report?.auditId || !Array.isArray(report?.breakdownTable)) {
-        return res.status(400).json({ error: 'A valid Mimir report is required.' });
-      }
+      const report = assertExportReport(req.body?.report);
       const buffer = await buildDocx(report);
       const name = safeFilename(report.structuredJd?.role_title || 'mimir-report');
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -315,17 +404,32 @@ export function createMimirApp(options = {}) {
       return res.send(buffer);
     } catch (error) {
       console.error('[Mimir DOCX export error]', error);
-      return res.status(500).json({ error: 'Unable to create DOCX report.' });
+      return res.status(/valid|too many|too large/i.test(error?.message || '') ? 400 : 500).json({ error: /valid|too many|too large/i.test(error?.message || '') ? error.message : 'Unable to create DOCX report.' });
     }
   });
+
+  // Unknown API routes must never fall through to the SPA HTML shell.
+  app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
 
   if (serveFrontend) {
     app.use((_req, res) => {
       res.sendFile(path.resolve(process.cwd(), 'public', 'index.html'));
     });
   } else {
-    app.use((_req, res) => res.status(404).json({ error: 'API route not found.' }));
+    app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
   }
+
+  // JSON-only error boundary: do not expose Express/Node stack traces or HTML parser errors.
+  app.use((error, _req, res, _next) => {
+    if (error?.type === 'entity.too.large' || error?.status === 413) {
+      return res.status(413).json({ error: 'Request payload is too large.' });
+    }
+    if (error instanceof SyntaxError && error?.status === 400 && 'body' in error) {
+      return res.status(400).json({ error: 'Request body contains invalid JSON.' });
+    }
+    console.error('[Mimir unhandled request error]', error?.message || error);
+    return res.status(500).json({ error: 'Unexpected server error.' });
+  });
 
   return app;
 }

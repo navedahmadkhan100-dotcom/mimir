@@ -15,7 +15,7 @@ test('pasted CV does not self-trigger location leak and date ranges are preserve
   const raw = `John Smith\nLocation: London SW1A 1AA\njohn@example.com\n\nProfessional Experience\nSenior Architect\nExample Technologies Ltd\nJan 2021 - Present\nDesigned Intune architecture.`;
   const result = privacy.mask(raw, 'cv');
   assert.match(result.maskedText, /Location: \[LOCATION_REDACTED\]/);
-  assert.match(result.maskedText, /Employer 1/);
+  assert.match(result.maskedText, /Example Technologies Ltd/);
   assert.match(result.maskedText, /Jan 2021 - Present/);
   assert.deepEqual(Array.from(privacy.leakScan(result.maskedText)), []);
 });

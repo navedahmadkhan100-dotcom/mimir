@@ -10,7 +10,7 @@ function loadPrivacy() {
   return window.MimirPrivacy;
 }
 
-test('browser privacy firewall removes identity, UK postcode, clearance and employer before transmission', () => {
+test('browser practical privacy removes direct identity/contact PII while retaining employer evidence', () => {
   const privacy = loadPrivacy();
   const raw = `John Smith\nLondon SW1A 1AA\njohn.smith@example.com\nlinkedin.com/in/john-smith\nActive SC Cleared until 2028\n\nProfessional Experience\nSenior Architect\nExample Technologies Ltd\nJan 2021 - Present\nDesigned Intune architecture.`;
   const result = privacy.mask(raw, 'cv');
@@ -19,6 +19,6 @@ test('browser privacy firewall removes identity, UK postcode, clearance and empl
   assert.match(result.maskedText, /\[EMAIL_REDACTED\]/);
   assert.match(result.maskedText, /\[PROFILE_REDACTED\]/);
   assert.match(result.maskedText, /\[CLEARANCE_REDACTED\]/);
-  assert.match(result.maskedText, /Employer 1/);
+  assert.match(result.maskedText, /Example Technologies Ltd/);
   assert.deepEqual(Array.from(privacy.leakScan(result.maskedText)), []);
 });

@@ -7,8 +7,12 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: AI_PROVIDER
         value: gemini
+      - key: AI_TIMEOUT_MS
+        value: 75000
       - key: NODE_VERSION
         value: 22.13.0
       - key: SCORING_REFERENCE_YEAR

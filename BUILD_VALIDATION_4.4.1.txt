@@ -1,0 +1,14 @@
+Mimir v4.4.1 — Practical PII validation
+
+- npm test: 55/55 PASS
+- npm run check: PASS
+- Exact CEIPAL-style browser -> server privacy round-trip: PASS
+- Browser residual warnings: []
+- Server residual warnings: []
+- Browser/server masking idempotent: true
+- Employer/job-history evidence preserved: true
+- Ordinary phrase “address emerging issues” preserved: true
+- No PII residual hard-stop strings in public/ or src/: PASS
+- Existing v4.4 security architecture tests: PASS
+
+Important: Practical PII mode intentionally does not claim perfect de-identification. Direct identifiers are redacted, while ambiguous heuristic matches are warnings and cannot block evaluation.

@@ -162,6 +162,54 @@ function replaceCount(text, regex, replacement, report, key) {
   return next;
 }
 
+
+function headerFooterIndexes(lines) {
+  const set = new Set();
+  for (let i = 0; i < Math.min(lines.length, 10); i += 1) set.add(i);
+  for (let i = Math.max(0, lines.length - 8); i < lines.length; i += 1) set.add(i);
+  return [...set].sort((a, b) => a - b);
+}
+
+const NAME_LABEL_RE = /^[ \t]*(?:candidate\s+name|full\s+name|name)\s*[:\-][ \t]*[^\n]+$/i;
+const HEADER_LOCATION_LINE_RE = /^[A-Za-zÀ-ÖØ-öø-ÿ .’'\-]{2,50},\s*(?:UK|United Kingdom|England|Scotland|Wales|Northern Ireland|Ireland|India|Germany|France|Spain|Portugal|Italy|Netherlands|Belgium|Switzerland|Poland|Romania|Denmark|Finland|Sweden|Norway|Austria|Czech(?: Republic|ia)?|Bulgaria)$/i;
+const PRACTICAL_ADDRESS_LABEL_RE = /^(?:[ \t]*(?:home\s+address|residential\s+address|postal\s+address|correspondence\s+address|address|location)\b[ \t]*(?::|\-)[ \t]*[^\n]+|[ \t]*(?:based\s+in|located\s+in)\b[ \t]+[^\n]+)$/i;
+
+function maskHeaderFooterIdentity(text, report) {
+  const lines = String(text || '').split('\n');
+
+  let headerEnd = Math.min(lines.length, 8);
+  for (let i = 0; i < headerEnd; i += 1) {
+    if (SECTION_HINTS.test(String(lines[i] || '').trim())) { headerEnd = i; break; }
+  }
+
+  let nameMasked = false;
+  for (let i = 0; i < headerEnd; i += 1) {
+    const trimmed = String(lines[i] || '').trim();
+    if (!trimmed) continue;
+    if (NAME_LABEL_RE.test(trimmed)) {
+      lines[i] = 'Name: [NAME_REDACTED]';
+      report.names = (report.names || 0) + 1;
+      nameMasked = true;
+      break;
+    }
+    if (!nameMasked && looksLikeName(trimmed)) {
+      lines[i] = '[NAME_REDACTED]';
+      report.names = (report.names || 0) + 1;
+      nameMasked = true;
+      break;
+    }
+  }
+
+  for (const i of headerFooterIndexes(lines)) {
+    const trimmed = String(lines[i] || '').trim();
+    if (trimmed && (PRACTICAL_ADDRESS_LABEL_RE.test(trimmed) || (i < 10 && HEADER_LOCATION_LINE_RE.test(trimmed)))) {
+      lines[i] = 'Location: [LOCATION_REDACTED]';
+      report.addresses = (report.addresses || 0) + 1;
+    }
+  }
+  return lines.join('\n');
+}
+
 export function maskCandidateText(input = '') {
   let text = String(input).replace(/\r\n/g, '\n');
   const existing = (pattern) => (text.match(pattern) || []).length;
@@ -174,15 +222,17 @@ export function maskCandidateText(input = '') {
     nationality: existing(/\[NATIONALITY_REDACTED\]/g),
     gender: existing(/\[GENDER_REDACTED\]/g),
     maritalStatus: existing(/\[MARITAL_STATUS_REDACTED\]/g),
-    addresses: existing(/\[ADDRESS_REDACTED\]/g),
+    addresses: existing(/\[ADDRESS_REDACTED\]|\[LOCATION_REDACTED\]/g),
     locations: existing(/\[LOCATION_REDACTED\]/g),
     clearances: existing(/\[CLEARANCE_REDACTED\]/g),
     identifiers: existing(/\[IDENTIFIER_REDACTED\]/g),
     socialHandles: existing(/\[PROFILE_REDACTED\]/g),
     references: existing(/\[REFERENCE_DETAILS_REDACTED\]/g),
-    employers: new Set((text.match(/\bEmployer\s+\d+\b/g) || [])).size,
+    employers: 0,
   };
 
+  // Practical PII mode: deterministic direct identifiers are removed globally.
+  // Heuristic company/name/location guesses never block evaluation.
   text = replaceCount(text, EMAIL_RE, '[EMAIL_REDACTED]', report, 'emails');
   text = replaceCount(text, LINKEDIN_RE, '[PROFILE_REDACTED]', report, 'profiles');
   text = replaceCount(text, URL_RE, '[PROFILE_REDACTED]', report, 'profiles');
@@ -191,32 +241,17 @@ export function maskCandidateText(input = '') {
   text = replaceCount(text, NATIONALITY_RE, 'Nationality: [NATIONALITY_REDACTED]', report, 'nationality');
   text = replaceCount(text, GENDER_RE, 'Gender: [GENDER_REDACTED]', report, 'gender');
   text = replaceCount(text, MARITAL_RE, 'Marital Status: [MARITAL_STATUS_REDACTED]', report, 'maritalStatus');
-  text = replaceCount(text, ADDRESS_RE, 'Location: [LOCATION_REDACTED]', report, 'addresses');
   text = replaceCount(text, UK_POSTCODE_RE, '[LOCATION_REDACTED]', report, 'locations');
   text = replaceCount(text, CLEARANCE_RE, '[CLEARANCE_REDACTED]', report, 'clearances');
   text = replaceCount(text, IDENTIFIER_RE, '[IDENTIFIER_REDACTED]', report, 'identifiers');
   text = replaceCount(text, SOCIAL_HANDLE_RE, '[PROFILE_REDACTED]', report, 'socialHandles');
   text = replaceCount(text, REFERENCE_RE, 'References: [REFERENCE_DETAILS_REDACTED]', report, 'references');
   text = text.replace(HONORIFIC_RE, '');
+  text = maskHeaderFooterIdentity(text, report);
 
-  const lines = text.split('\n');
-  for (let i = 0; i < Math.min(lines.length, 6); i += 1) {
-    if (looksLikeName(lines[i])) {
-      lines[i] = '[NAME_REDACTED]';
-      report.names += 1;
-      break;
-    }
-  }
-  text = lines.join('\n');
-
-  text = maskEmployers(text, report);
-
-  return {
-    maskedText: text,
-    report,
-  };
+  // Employer names are job-history evidence and are intentionally retained.
+  return { maskedText: text, report };
 }
-
 
 function validPhoneMatches(text) {
   return [...String(text).matchAll(PHONE_RE)].map((m) => m[0]).filter((candidate) => {
@@ -234,25 +269,15 @@ export function collectCandidateSensitiveTerms(input = '') {
   const text = String(input).replace(/\r\n/g, '\n');
   const set = new Set();
 
+  // Diagnostics only. These are deterministic direct identifiers, not heuristic
+  // names/locations/employers. The evaluation route does not block on this list.
   for (const match of text.matchAll(EMAIL_RE)) addPhrase(set, match[0]);
   for (const match of text.matchAll(LINKEDIN_RE)) addPhrase(set, match[0]);
   for (const match of text.matchAll(URL_RE)) addPhrase(set, match[0]);
   for (const phone of validPhoneMatches(text)) addPhrase(set, phone);
-
-  const labeledPatterns = [DOB_RE, NATIONALITY_RE, GENDER_RE, MARITAL_RE, ADDRESS_RE, UK_POSTCODE_RE, CLEARANCE_RE, IDENTIFIER_RE, SOCIAL_HANDLE_RE, REFERENCE_RE];
-  for (const regex of labeledPatterns) {
+  for (const regex of [IDENTIFIER_RE, CLEARANCE_RE]) {
     for (const match of text.matchAll(regex)) addPhrase(set, match[0]);
   }
-
-  const lines = text.split('\n');
-  for (let i = 0; i < Math.min(lines.length, 8); i += 1) {
-    if (looksLikeName(lines[i])) {
-      addPhrase(set, lines[i]);
-      break;
-    }
-  }
-
-  for (const employer of findEmployerCandidates(lines)) addPhrase(set, employer.original);
 
   return [...set];
 }

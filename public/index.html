@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.10.0/mammoth.browser.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="/privacy.js"></script>
   <script src="/document-client.js"></script>
 </head>
@@ -87,10 +87,10 @@
               <div class="section-kicker blue">02 · CANDIDATE EVIDENCE</div>
               <h2>CV / Résumé</h2>
             </div>
-            <span class="privacy-pill">PII masked</span>
+            <span class="privacy-pill">Basic PII redaction</span>
           </div>
           <textarea id="cvText" class="input-area cv-area" placeholder="Paste the CV here, or drop a PDF / DOCX / TXT below. Uploaded files are extracted immediately and this box will show the redacted version that Mimir evaluates."></textarea>
-          <div id="cvTransparency" class="transparency-line">Drop a file to preview the redacted text channel. Diagrams and charts are analysed as a separate privacy-scrubbed evidence channel.</div>
+          <div id="cvTransparency" class="transparency-line">Drop a file to preview the redacted text channel. Obvious contact/header PII is masked locally; diagrams and charts use a separate local privacy scrub.</div>
           <div class="file-picker">
             <label class="dropzone" id="cvDropzone" tabindex="0">
               <div class="drop-icon">↥</div>
@@ -111,7 +111,7 @@
           <span class="button-arrow">→</span>
         </button>
         <div id="formError" class="error-box hidden"></div>
-        <p class="privacy-note">Raw CV files stay in this browser. Only privacy-prepared evidence is sent for evaluation; local JD memory and Evidence Intelligence stay in this browser.</p>
+        <p class="privacy-note">Raw CV files stay in this browser. Basic direct identifiers are redacted locally and re-masked server-side; ambiguous privacy heuristics never block evaluation.</p>
       </aside>
 
       <section class="results-column">

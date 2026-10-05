@@ -21,11 +21,11 @@ test('redaction is transparent and idempotent across extract then evaluate', () 
   assert.ok(second.report.phones >= 1);
 });
 
-test('visual privacy term collector captures candidate identity and inline employers', async () => {
+test('server residual detector reports direct identifiers only, not heuristic names or employers', async () => {
   const { collectCandidateSensitiveTerms } = await import('../src/mask.js');
   const input = `Andrew Example\nandrew@example.com\n+44 7700 900123\nLead Architect @ Example Data Systems – (January 2024 – July 2026)\nDesigned datacentre architecture.`;
   const terms = collectCandidateSensitiveTerms(input).join(' | ');
-  assert.match(terms, /Andrew Example/i);
   assert.match(terms, /andrew@example\.com/i);
-  assert.match(terms, /Example Data Systems/i);
+  assert.match(terms, /7700 900123/i);
+  assert.doesNotMatch(terms, /Andrew Example|Example Data Systems/i);
 });

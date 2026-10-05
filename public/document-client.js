@@ -2,6 +2,15 @@
   const MAX_VISUALS = 6;
   const MAX_VISUAL_EDGE = 1280;
   const JPEG_QUALITY = 0.70;
+  const MAX_PDF_PAGES = 80;
+  const MAX_JD_TEXT_CHARS = 150000;
+  const MAX_CV_TEXT_CHARS = 250000;
+  const MAX_PREPARED_VISUAL_BYTES = 800 * 1024;
+  const MAX_DOCX_ENTRIES = 2000;
+  const MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
+  const MAX_DOCX_XML_BYTES = 8 * 1024 * 1024;
+  const MAX_DOCX_MEDIA_BYTES = 24 * 1024 * 1024;
+  const MAX_DOCX_SINGLE_MEDIA_BYTES = 6 * 1024 * 1024;
   const VISUAL_HINT = /\b(architecture|architectural|diagram|topology|workflow|flowchart|chart|graph|design|network|solution|infrastructure|schema|model|dashboard|roadmap|process|sequence|data\s+flow)\b/i;
 
   let pdfjsPromise;
@@ -29,10 +38,29 @@
       resized.getContext('2d').drawImage(canvas, 0, 0, resized.width, resized.height);
       output = resized;
     }
-    return new Promise((resolve,reject) => output.toBlob(async (blob) => {
-      if (!blob) return reject(new Error('Unable to encode visual asset.'));
-      resolve({ base64:dataUrlToBase64(await blobDataUrl(blob)), mimeType:'image/jpeg', width:output.width, height:output.height });
-    }, 'image/jpeg', quality));
+
+    async function encode(target, q) {
+      const blob = await new Promise((resolve,reject) => target.toBlob((value) => value ? resolve(value) : reject(new Error('Unable to encode visual asset.')), 'image/jpeg', q));
+      return blob;
+    }
+
+    let q = quality;
+    let blob = await encode(output, q);
+    while (blob.size > MAX_PREPARED_VISUAL_BYTES && q > 0.42) {
+      q = Math.max(0.42, q - 0.08);
+      blob = await encode(output, q);
+    }
+    if (blob.size > MAX_PREPARED_VISUAL_BYTES) {
+      const scale = Math.sqrt(MAX_PREPARED_VISUAL_BYTES / blob.size) * 0.92;
+      const smaller = document.createElement('canvas');
+      smaller.width = Math.max(320, Math.round(output.width * scale));
+      smaller.height = Math.max(320, Math.round(output.height * scale));
+      smaller.getContext('2d').drawImage(output, 0, 0, smaller.width, smaller.height);
+      output = smaller;
+      blob = await encode(output, 0.48);
+    }
+    if (blob.size > MAX_PREPARED_VISUAL_BYTES) throw new Error("Visual asset could not be compressed inside Mimir\'s privacy-safe payload limit.");
+    return { base64:dataUrlToBase64(await blobDataUrl(blob)), mimeType:'image/jpeg', width:output.width, height:output.height };
   }
 
   function normalizedToken(value='') { return String(value).toLowerCase().replace(/[^a-z0-9@.+_-]/g,''); }
@@ -91,11 +119,12 @@
       const pathOps = new Set([lib.OPS?.constructPath, lib.OPS?.stroke, lib.OPS?.fill, lib.OPS?.eoFill].filter((x)=>x !== undefined));
       let images=0, vectors=0;
       for (const fn of ops.fnArray || []) { if (imageOps.has(fn)) images += 1; if (pathOps.has(fn)) vectors += 1; }
-      // CV page 1 commonly contains a portrait/logo beside profile text. For privacy,
-      // raster-image-only page-1 visuals fail closed even when the page mentions architecture.
-      if (pageNumber === 1 && images > 0 && vectors < 45) return false;
+      // Raster-only pages can be portraits/logos. Do not transmit them just because a PDF
+      // contains an image. A raster page must also carry a strong technical-visual hint;
+      // vector-heavy pages are treated as likely diagrams/charts.
+      if (images > 0 && vectors < 45) return VISUAL_HINT.test(text);
       if (VISUAL_HINT.test(text)) return true;
-      return images >= 1 || vectors >= 45;
+      return vectors >= 45;
     } catch {
       return false;
     }
@@ -105,11 +134,16 @@
     const lib = await pdfjs();
     const bytes = new Uint8Array(await file.arrayBuffer());
     const doc = await lib.getDocument({ data:bytes }).promise;
+    if (doc.numPages > MAX_PDF_PAGES) throw new Error(`PDF has ${doc.numPages} pages. Mimir accepts up to ${MAX_PDF_PAGES} pages per document.`);
     const pageTexts = []; const visualPages = [];
+    let extractedChars = 0;
     for (let n=1;n<=doc.numPages;n+=1) {
       const page = await doc.getPage(n);
       const content = await page.getTextContent();
       const text = content.items.map((i)=>i.str).join(' ');
+      extractedChars += text.length;
+      const maxTextChars = kind === 'jd' ? MAX_JD_TEXT_CHARS : MAX_CV_TEXT_CHARS;
+      if (extractedChars > maxTextChars) throw new Error(`PDF contains too much extracted text to process safely (maximum ${maxTextChars.toLocaleString()} characters).`);
       pageTexts.push(text);
       if (visualPages.length < MAX_VISUALS && await pdfPageVisualSignal(page, lib, text, n)) visualPages.push(n);
     }
@@ -142,13 +176,33 @@
 
   async function extractDocx(file, kind) {
     const buffer = await file.arrayBuffer();
-    if (!window.mammoth) throw new Error('DOCX parser failed to load.');
+    if (!window.mammoth || !window.JSZip) throw new Error('DOCX parser failed to load.');
+
+    // Preflight the ZIP central directory before Mammoth extracts content. This blocks
+    // compressed DOCX bombs and unusually large embedded media from freezing the browser.
+    const zip = await JSZip.loadAsync(buffer);
+    const entries = Object.values(zip.files || {});
+    if (entries.length > MAX_DOCX_ENTRIES) throw new Error('DOCX contains too many internal files to process safely.');
+    let totalUncompressed = 0;
+    let mediaUncompressed = 0;
+    for (const entry of entries) {
+      const size = Number(entry?._data?.uncompressedSize || 0);
+      totalUncompressed += size;
+      if (entry.name === 'word/document.xml' && size > MAX_DOCX_XML_BYTES) throw new Error('DOCX document content is too large to process safely.');
+      if (/^word\/media\//.test(entry.name || '')) {
+        if (size > MAX_DOCX_SINGLE_MEDIA_BYTES) throw new Error('DOCX contains an embedded image that is too large to process safely.');
+        mediaUncompressed += size;
+      }
+    }
+    if (totalUncompressed > MAX_DOCX_UNCOMPRESSED_BYTES || mediaUncompressed > MAX_DOCX_MEDIA_BYTES) throw new Error("DOCX expands beyond Mimir\'s safe processing limit.");
+
     const rawText = (await mammoth.extractRawText({ arrayBuffer:buffer })).value || '';
+    const maxTextChars = kind === 'jd' ? MAX_JD_TEXT_CHARS : MAX_CV_TEXT_CHARS;
+    if (rawText.length > maxTextChars) throw new Error(`DOCX contains too much extracted text to process safely (maximum ${maxTextChars.toLocaleString()} characters).`);
     const masked = window.MimirPrivacy.mask(rawText, kind);
     const assets = []; let detected=0, withheld=0;
 
     if (window.JSZip) {
-      const zip = await JSZip.loadAsync(buffer);
       const names = Object.keys(zip.files).filter((n)=>/^word\/media\//.test(n) && !zip.files[n].dir).slice(0,MAX_VISUALS*2);
       detected = names.length;
       for (const name of names) {
@@ -179,11 +233,13 @@
     if (ext === 'docx') return extractDocx(file,kind);
     if (ext === 'txt') {
       const rawText = await file.text();
+      const maxTextChars = kind === 'jd' ? MAX_JD_TEXT_CHARS : MAX_CV_TEXT_CHARS;
+      if (rawText.length > maxTextChars) throw new Error(`TXT contains too much text to process safely (maximum ${maxTextChars.toLocaleString()} characters).`);
       const masked = window.MimirPrivacy.mask(rawText,kind);
       return { text:masked.maskedText, maskingReport:masked.report, visualAssets:[], documentIntelligence:{ format:'txt', pageCount:null, nativeTextCharacters:rawText.length, visualCandidatesDetected:0, visualAssetsPrepared:0, visualAssetsWithheld:0, visualPages:[], mode:'text-only', notes:[] } };
     }
     throw new Error('Unsupported file type.');
   }
 
-  window.MimirDocumentClient = { extract, version:'browser-document-intelligence-2.3.1-pdf-worker-fixed' };
+  window.MimirDocumentClient = { extract, version:'browser-document-intelligence-2.4.0-security-hardened' };
 })();

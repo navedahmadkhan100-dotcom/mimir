@@ -1,3 +1,19 @@
+# Mimir v4.4.1 — Practical PII / Non-Blocking Evaluation
+
+- Keeps the v4.4 security hardening, prompt-injection isolation, rate limiting, payload validation and deterministic scoring architecture.
+- Replaces aggressive PII hard-stops with practical redaction.
+- Redacts obvious header/contact PII: candidate name in the true CV header, email, phone, LinkedIn/GitHub/profile URLs, labelled location/address, UK postcodes, explicit identifiers, clearance labels and reference contact lines.
+- Employer/company names are retained as professional evidence.
+- Ordinary phrases such as “address emerging issues” are never treated as postal addresses.
+- Browser and server residual PII detections are warnings only and do not stop evaluation.
+- Server repeats deterministic masking before Gemini as defense in depth.
+- Visuals with unresolved direct PII can still be withheld locally without blocking the text evaluation.
+- Exact CEIPAL-style browser→server round-trip tested.
+
+# Mimir v4.4.0 — Render Security-Hardened
+
+Full-system security and architecture hardening release. See `RELEASE_NOTES_SECURITY.md` and `SECURITY_AUDIT.md`.
+
 # Mimir v4.3 — Render Fullstack
 
 - Recombined v4.2 split frontend/backend into a single Render deployment.

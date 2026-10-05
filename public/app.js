@@ -1,6 +1,8 @@
 
 const MIMIR_API_BASE = String(window.MIMIR_CONFIG?.apiBase || '').replace(/\/$/, '');
-const MIMIR_MAX_API_PAYLOAD_BYTES = Number(window.MIMIR_CONFIG?.maxApiPayloadBytes || 4_700_000);
+const MIMIR_MAX_API_PAYLOAD_BYTES = Number(window.MIMIR_CONFIG?.maxApiPayloadBytes || 4_000_000);
+const MIMIR_MAX_JD_CHARS = Number(window.MIMIR_CONFIG?.maxJdChars || 150_000);
+const MIMIR_MAX_CV_CHARS = Number(window.MIMIR_CONFIG?.maxCvChars || 250_000);
 const MIMIR_SERVER_UI_EXPORT = window.MIMIR_CONFIG?.serverUiExport !== false;
 function apiUrl(path) {
   if (!path.startsWith('/')) path = `/${path}`;
@@ -301,8 +303,7 @@ async function extractFileToTextarea(file, kind) {
   try {
     if (!window.MimirDocumentClient) throw new Error('Local document engine failed to load. Refresh and try again.');
     const data = await window.MimirDocumentClient.extract(file, kind);
-    const leaks = window.MimirPrivacy?.leakScan(data.text) || [];
-    if (isCv && leaks.length) throw new Error(`Privacy firewall blocked transmission: possible ${leaks.join(', ')} remains in extracted text.`);
+    const privacyWarnings = isCv ? (window.MimirPrivacy?.leakScan(data.text) || []) : [];
 
     textarea.value = data.text;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -316,7 +317,7 @@ async function extractFileToTextarea(file, kind) {
       const totalMasked = Object.values(data.maskingReport || {}).reduce((sum, value) => sum + Number(value || 0), 0);
       if (transparency) {
         const visuals = Number(data.documentIntelligence?.visualCandidatesDetected || 0);
-        transparency.innerHTML = `<strong>Local privacy firewall passed.</strong> ${totalMasked} sensitive marker${totalMasked === 1 ? '' : 's'} masked before network transmission.${visuals ? ` ${visuals} visual candidate${visuals === 1 ? '' : 's'} inspected locally.` : ''}`;
+        transparency.innerHTML = `<strong>Basic PII redaction applied.</strong> ${totalMasked} direct identifier${totalMasked === 1 ? '' : 's'} masked locally before evaluation.${visuals ? ` ${visuals} visual candidate${visuals === 1 ? '' : 's'} inspected locally.` : ''}${privacyWarnings.length ? ` ${privacyWarnings.length} residual direct-identifier warning${privacyWarnings.length === 1 ? '' : 's'} detected; Mimir will re-mask server-side and continue.` : ''}`;
       }
       renderDocumentIntel('cv', data.documentIntelligence);
       setFileRemoveVisibility('cv', true);
@@ -334,7 +335,7 @@ async function extractFileToTextarea(file, kind) {
     input.value = '';
   } catch (error) {
     label.textContent = isCv ? 'Drop CV or browse' : 'Drop JD or browse';
-    if (isCv && transparency) transparency.textContent = 'Privacy firewall blocked or could not safely prepare this CV.';
+    if (isCv && transparency) transparency.textContent = 'Mimir could not prepare this CV. The document itself may be unsupported or damaged.';
     showError(error.message);
   }
 }
@@ -559,10 +560,9 @@ function utf8Bytes(value='') {
 }
 
 function fitEvaluationPayload(payload) {
-  // AWS Lambda synchronous requests are capped at 6 MB. Keep a safety margin for
-  // the Function URL event envelope and headers. Visuals are already resized in
-  // document-client.js; if a particularly graphic-heavy CV is still too large,
-  // drop the largest prepared visual(s) rather than fail the entire evaluation.
+  // Keep evaluation requests inside Mimir's backend safety envelope. Visuals are
+  // already resized in document-client.js; if a graphic-heavy document is still
+  // too large, withhold the largest prepared visual(s) instead of failing the run.
   const cloned = { ...payload, jdVisualAssets:[...(payload.jdVisualAssets || [])], cvVisualAssets:[...(payload.cvVisualAssets || [])] };
   const dropped = [];
   let json = JSON.stringify(cloned);
@@ -578,7 +578,7 @@ function fitEvaluationPayload(payload) {
     json = JSON.stringify(cloned);
   }
   if (utf8Bytes(json) > MIMIR_MAX_API_PAYLOAD_BYTES) {
-    throw new Error('The sanitized evaluation payload is still too large for the serverless API. Shorten unusually large pasted text and retry.');
+    throw new Error('The sanitized evaluation payload is still too large for Mimir. Shorten unusually large pasted text and retry.');
   }
   if (dropped.length) {
     cloned.privacy = { ...(cloned.privacy || {}), payloadBudgetVisualsWithheld:dropped.length };
@@ -594,10 +594,11 @@ async function evaluateCandidate() {
   const cvInput = $('cvText').value.trim();
   if (!jdText) return showError('Paste or upload a job description first.');
   if (!cvInput && !state.cvFile) return showError('Paste or upload a candidate CV first.');
+  if (jdText.length > MIMIR_MAX_JD_CHARS) return showError(`Job description is too large. Maximum ${MIMIR_MAX_JD_CHARS.toLocaleString()} characters.`);
+  if (cvInput.length > MIMIR_MAX_CV_CHARS) return showError(`Candidate CV is too large. Maximum ${MIMIR_MAX_CV_CHARS.toLocaleString()} characters.`);
   if (!window.MimirPrivacy) return showError('Candidate privacy firewall is unavailable. Refresh the page before evaluating.');
   const clientMasked = window.MimirPrivacy.mask(cvInput, 'cv');
-  const privacyLeaks = window.MimirPrivacy.leakScan(clientMasked.maskedText);
-  if (privacyLeaks.length) return showError(`Privacy firewall blocked evaluation because sensitive data may remain: ${privacyLeaks.join(', ')}.`);
+  const privacyWarnings = window.MimirPrivacy.leakScan(clientMasked.maskedText);
   const cvText = clientMasked.maskedText.trim();
 
   const previousResult = state.result;
@@ -615,7 +616,7 @@ async function evaluateCandidate() {
       cvVisualAssets: state.cvVisualAssets,
       jdDocumentIntelligence: state.jdDocumentIntel,
       cvDocumentIntelligence: state.cvDocumentIntel,
-      privacy: { clientPrepared: true, firewallVersion: window.MimirPrivacy?.rulesVersion || 'unknown', documentEngineVersion: window.MimirDocumentClient?.version || 'unknown' },
+      privacy: { clientPrepared: true, firewallVersion: window.MimirPrivacy?.rulesVersion || 'unknown', documentEngineVersion: window.MimirDocumentClient?.version || 'unknown', mode: window.MimirPrivacy?.mode || 'practical', warnings: privacyWarnings },
     };
 
     if (cachedStructure) {
@@ -964,9 +965,8 @@ async function exportServer(format) {
   try {
     let blob;
     if (!MIMIR_SERVER_UI_EXPORT) {
-      // Lambda Function URLs cap synchronous request payloads at 6 MB. Sending a
-      // full-page screenshot plus the report can exceed that limit, so AWS mode
-      // uses the semantic report generator directly.
+      // Render mode uses the structured semantic report generator directly; this
+      // avoids sending a large UI screenshot back to the server.
       blob = await semanticExportFallback(format);
     } else {
       try {

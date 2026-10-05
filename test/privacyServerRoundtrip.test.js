@@ -17,7 +17,7 @@ test('browser-redacted CEIPAL CV passes server privacy defense-in-depth without 
   const privacy = loadPrivacy();
   const browser = privacy.mask(CEIPAL_STYLE_CV, 'cv');
   assert.deepEqual(Array.from(privacy.leakScan(browser.maskedText)), []);
-  assert.match(browser.maskedText, /Employer \d+/);
+  assert.match(browser.maskedText, /INFOMATRIX SOLUTIONS/);
 
   const server = maskCandidateText(browser.maskedText);
   const residual = collectCandidateSensitiveTerms(server.maskedText);

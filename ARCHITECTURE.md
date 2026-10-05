@@ -1,12 +1,18 @@
-# Mimir v4.2 — Reference Architecture
+# Mimir v4.4.0 — Render Security-Hardened Reference Architecture
 
 ```text
                          JOB DESCRIPTION
                                │
                                ▼
                     Browser Document Engine
+                     text + approved visuals
                                │
-                       structured text/visuals
+                               ▼
+                     JD privacy preparation
+                               │
+                               ▼
+                     JD STRUCTURE FREEZE
+                   (candidate CV not present)
                                │
                                │
 CANDIDATE CV                   │
@@ -27,21 +33,24 @@ Candidate Privacy Firewall     │
       │                        │
 name / email / phone / location / postcode
 LinkedIn / GitHub / IDs / references / clearance
-visual PII / QR / metadata / sensitive identity hints
+visual text PII / metadata / sensitive identity hints
       │
       ▼
 Leak check — fail closed
       │
       ▼
-Lambda-safe payload budget
+Bounded sanitized payload
       │
       └───────────────────────┬─────────────────────────
                               ▼
-                         AWS LAMBDA API
+                         RENDER WEB API
+                              │
+                    server privacy re-check
                               │
                          AI Gateway
                               │
-                    semantic extraction
+                    candidate evaluation
+                     against frozen JD
                               │
                               ▼
                          Claim Model
@@ -75,56 +84,59 @@ Lambda-safe payload budget
                                        │
                                        ▼
                               Evidence Intelligence
+                           (browser-local, anonymized)
 ```
 
-## Frontend boundary
+## Browser boundary
 
-The frontend owns document handling because raw candidate files do not need to reach Mimir's API. It performs:
+The official Mimir client performs document preparation before transmission:
 
-- PDF/DOCX/TXT extraction;
-- page provenance tagging;
-- chart/graph/diagram detection;
-- visual OCR/privacy scrubbing;
-- candidate PII/sensitive-attribute masking;
-- leak re-scan;
-- visual resizing/compression;
-- AWS Lambda payload budgeting;
-- browser-local JD structure cache;
-- browser-local anonymized Evidence Intelligence observations.
+- PDF/DOCX/TXT extraction and page provenance;
+- chart/graph/architecture-diagram detection;
+- OCR-based text privacy scrubbing on approved visuals;
+- candidate identity/sensitive-attribute masking;
+- leak re-scan and fail-closed handling;
+- bounded visual resizing/compression;
+- browser-local saved-JD structure cache;
+- browser-local anonymized Evidence Intelligence.
+
+The server does not accept raw document uploads.
 
 ## Backend boundary
 
-Lambda receives prepared evidence, not the original CV file. The backend owns:
+The Render service receives prepared evidence and owns:
 
-- defense-in-depth text masking;
-- AI secret/API call;
-- schema validation;
-- requirement claims;
-- semantic evidence interpretation;
-- entailment and inference boundaries;
-- Odin adversarial verification;
-- policy/substitution rules;
-- deterministic scoring;
-- evidence graph and score lineage;
+- defense-in-depth privacy masking;
+- first-run JD-only structure compilation;
+- frozen-JD candidate evaluation;
+- Gemini secret/API orchestration with timeout;
+- schema validation and evidence provenance validation;
+- Claim Model, Evidence Semantics, Entailment and Evidence Boundaries;
+- Odin adversarial review and policy authority caps;
+- deterministic scoring and score lineage;
 - governance/audit packet;
-- semantic PDF/DOCX exports.
+- bounded PDF/DOCX report generation.
 
-## Serverless constraints deliberately handled
+## Security boundary
 
-- Lambda is stateless. Browser-local Evidence Intelligence remains the persistence layer until a future enterprise database is added.
-- In-memory `express-rate-limit` is disabled by default in Lambda because separate execution environments do not form a global rate limiter.
-- Lambda synchronous request/response payloads are bounded. Browser payload budgeting prevents oversized evaluation requests.
-- Pixel-perfect screenshot export is disabled in AWS mode to avoid uploading large screenshots; structured PDF/DOCX exports remain available.
-- The frontend and backend are physically separate deployment units.
+- CSP + security headers through Helmet;
+- same-origin/allowed-origin browser policy;
+- proxy-aware route-specific rate limiting;
+- no-store API responses;
+- strict request/text/visual/export limits;
+- DOCX expansion and PDF page safety limits;
+- HTML escaping for model-controlled UI text;
+- pinned reviewed direct dependencies;
+- candidate CV cannot participate in first-pass JD compilation.
 
 ## Scoring authority
 
 ```text
 AI semantic interpretation
         ↓
-Evidence state / relationship
+server-verified evidence provenance
         ↓
-Odin + policy authority cap
+Entailment + Odin + policy authority cap
         ↓
 Deterministic JavaScript
         ↓
@@ -133,6 +145,6 @@ Numerical score
 
 AI never directly assigns Mimir's final candidate score.
 
-## Future enterprise persistence
+## Important residual boundaries
 
-A future PostgreSQL/Supabase/Aurora layer can persist organization-scoped evidence intelligence, policies, evaluations and governance data. It is intentionally not required for the ₹0 launch architecture.
+See `SECURITY_AUDIT.md`. In particular, the public evaluation API still needs a bot challenge/authentication for stronger quota-abuse resistance, and visual non-text identity such as faces is not yet guaranteed to be detected locally.
