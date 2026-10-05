@@ -23,3 +23,11 @@ Full-system security and architecture hardening release. See `RELEASE_NOTES_SECU
 - Visual evidence remains supported.
 - Removed AWS Lambda adapter/deployment files and Lambda-only dependency.
 - Render Free may spin down after idle time; this is accepted for the current zero-budget launch.
+
+
+## v4.4.2 — Fast document preparation
+- Reuses one Tesseract OCR worker per document instead of creating a new worker for every visual.
+- Removes the second full OCR verification pass in Practical PII mode.
+- PDF technical-visual pages with a native text layer and no direct PII skip OCR entirely.
+- PDF visual render scale reduced from 1.35 to 1.20 before final adaptive compression.
+- Visual evidence remains enabled; OCR failures still withhold unsafe visual assets rather than sending them.
