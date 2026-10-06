@@ -685,3 +685,64 @@ button,textarea,input{font-family:inherit}
   .evaluate-button.is-loading,.evaluate-button.is-loading::after{animation:none!important;will-change:auto!important}
   .evaluate-button.is-loading::after{opacity:.5;transform:none}
 }
+
+
+/* v1.0 final quick-fit UI override */
+.hero-build strong{color:#f7d5f9}
+.hero-build{letter-spacing:.12em}
+.footer-line span:last-child{font-weight:700}
+/* one-page laptop fit */
+@media (min-width: 980px){
+  body{overflow-y:hidden;}
+  .shell{width:min(1600px,calc(100% - 30px));padding:12px 0 10px;}
+  .hero{min-height:96px!important;padding:14px 24px 16px!important;display:flex;justify-content:center;}
+  .hero-identity-top{margin-bottom:4px;}
+  .hero-central{margin-top:6px!important;gap:14px;align-items:center;}
+  .hero-title-block{text-align:left;}
+  .hero h1{font-size:clamp(30px,3vw,44px)!important;line-height:1.06;}
+  .hero-underline{margin:6px 0 7px;width:168px;height:3px;}
+  .hero-sub{margin-top:8px!important;font-size:11px!important;line-height:1.45;}
+  .creator-strip{margin-top:6px!important;min-height:32px!important;padding:7px 14px!important;}
+  .workspace{grid-template-columns:minmax(0,1fr)!important;gap:10px!important;margin-top:10px!important;}
+  .input-stack{display:grid!important;grid-template-columns:minmax(0,1fr) 108px minmax(0,1fr);grid-auto-rows:auto;align-items:start;gap:10px!important;position:static!important;top:auto!important;}
+  .jd-card{grid-column:1;grid-row:1;}
+  .evaluation-bridge{grid-column:2;grid-row:1;align-self:center;justify-self:center;min-height:unset!important;margin-top:18px;}
+  .cv-card{grid-column:3;grid-row:1;}
+  .jd-insight-panel{grid-column:1 / -1;grid-row:2;}
+  .formError,.privacy-note{grid-column:1 / -1;}
+  .input-card{padding:16px 16px 14px!important;border-radius:24px;}
+  .card-topline h2{font-size:20px!important;margin-top:4px!important;}
+  .input-area{height:142px!important;margin-top:10px!important;padding:12px 14px!important;font-size:13px!important;line-height:1.55!important;}
+  .input-area.cv-area{height:142px!important;}
+  .dropzone{margin-top:9px!important;padding:10px 12px!important;}
+  .drop-icon{width:34px;height:34px;}
+  .drop-copy strong{font-size:11.5px!important;}
+  .drop-copy span{font-size:10px!important;}
+  .jd-command-row{margin-top:9px!important;}
+  .jd-intel-action,.jd-memory-box{min-height:42px!important;}
+  .transparency-line,.privacy-note{font-size:9.6px!important;line-height:1.4!important;}
+  .evaluate-button{width:96px!important;height:96px!important;min-height:96px!important;}
+  .evaluate-button #evaluateBtnText{font-size:10px!important;line-height:1.18!important;}
+  .results-column{display:none!important;}
+  .seo-link-row{margin-top:10px!important;}
+  .footer-line{padding:8px 2px 0!important;}
+}
+/* panel gradient identity */
+.jd-card.glass-frame{background:linear-gradient(135deg,rgba(18,68,48,.94) 0%,rgba(18,52,41,.95) 34%,rgba(12,26,24,.97) 100%)!important;border-color:rgba(112,232,174,.19)!important;}
+.jd-card.glass-frame::before{background:linear-gradient(120deg,rgba(143,255,198,.12),transparent 25%,transparent 72%,rgba(70,195,135,.08))!important;}
+.cv-card.glass-frame{background:linear-gradient(135deg,rgba(56,34,98,.95) 0%,rgba(46,31,90,.95) 35%,rgba(19,20,42,.98) 100%)!important;border-color:rgba(183,138,255,.18)!important;}
+.cv-card.glass-frame::before{background:linear-gradient(120deg,rgba(211,170,255,.10),transparent 26%,transparent 72%,rgba(118,90,255,.08))!important;}
+.section-kicker.pink{color:#98f0b4!important}.section-kicker.blue{color:#bca5ff!important}
+/* align version copy language */
+.hero-kicker{color:#bfe8da!important}
+/* mobile/tablet keep scroll */
+@media (max-width: 979px){ body{overflow-y:auto;} }
+
+
+/* v1.0 hotfix: keep results available after evaluation */
+@media (min-width: 980px){
+  body:not(.has-results):not(.is-evaluating){overflow-y:hidden!important;}
+  body.has-results, body.is-evaluating{overflow-y:auto!important;}
+  body:not(.has-results):not(.is-evaluating) .results-column{display:none!important;}
+  body.has-results .results-column, body.is-evaluating .results-column{display:block!important;}
+}
