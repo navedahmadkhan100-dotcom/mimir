@@ -1,0 +1,405 @@
+{
+  "benchmark": "Mimir JD Intelligence Initial Reference Benchmark",
+  "version": "0.1-draft",
+  "profiles_count": 12,
+  "scope": "JD interpretation only; no CV scoring or code change",
+  "methodology": "Expert-proposed role intent, requirements, explicit constraints, alternatives, ambiguity and suggested technical/functional/operational weight distribution. Validate against hiring-manager labels before calibration.",
+  "category_definitions": {
+    "technical": "Engineering, systems and platform implementation or architecture",
+    "functional_domain": "Domain expertise, business rules and specialist functional practices",
+    "operational_delivery": "Programme execution, governance, coordination and operational delivery",
+    "behavioral": "Do not assign arbitrary CV score for general qualities; verify or use documented work behavior in an applicable scored capability",
+    "eligibility": "Separate verification; missing CV mention is unknown rather than failed"
+  },
+  "profiles": [
+    {
+      "id": "JD-01",
+      "title": "Data Center Transformation Architect",
+      "role_intent": "Own the assessment, target architecture, migration architecture and technical assurance for a complex data-center transformation.",
+      "weights": {
+        "technical": 65,
+        "functional_domain": 10,
+        "operational_delivery": 25
+      },
+      "core_capabilities": [
+        "Cross-domain target DC architecture: compute, storage, networking, virtualization, security and DR",
+        "Current-state assessment; strategy, roadmaps and capacity planning",
+        "Design ownership: HLD/LLD, technical standards and final architecture decisions",
+        "Migration-wave design, dependency mapping, cutover and rollback",
+        "Operational supportability, HA, backup, monitoring, RPO/RTO and DR testing",
+        "Technical governance and cross-workstream design assurance"
+      ],
+      "explicit_constraints": [
+        "12+ years infrastructure / data center architecture experience",
+        "Proven large-scale DC transformation delivery ownership"
+      ],
+      "preference_and_alternatives": [
+        "VMware strongly preferred; Hyper-V/KVM are mentioned as technology context",
+        "HCI where applicable, not necessarily mandatory"
+      ],
+      "interpretation_risks": [
+        "Do not equate generic infrastructure PM activity with target architecture ownership",
+        "Do not require every listed vendor/product as an independent must-have",
+        "Avoid double-counting similar responsibilities repeated under skills and duties"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-02",
+      "title": "BlackRock Aladdin Sybase-to-SQL Server Migration Project Manager",
+      "role_intent": "Lead portfolio-level planning, dependency management, migration waves, governance and reporting for a large BlackRock application migration.",
+      "weights": {
+        "technical": 15,
+        "functional_domain": 15,
+        "operational_delivery": 70
+      },
+      "core_capabilities": [
+        "Technology programme/project delivery, RAID, stakeholder management and cross-team governance",
+        "Large-application portfolio inventory and ownership/dependency mapping",
+        "Migration wave, release, cutover, go/no-go and readiness coordination",
+        "Azure DevOps inventory/tracking, Power BI executive reporting",
+        "Stakeholder coordination with application, database, infrastructure and support teams"
+      ],
+      "explicit_constraints": [
+        "8+ years project management experience",
+        "Prior work in BlackRock environments with BlackRock stakeholder teams"
+      ],
+      "preference_and_alternatives": [
+        "Aladdin ecosystem exposure is preferred",
+        "Sybase/SQL Server database migration exposure is preferred",
+        "Programming languages are awareness/context, not mandatory hands-on engineering"
+      ],
+      "interpretation_risks": [
+        "Do not infer that SQL Server or Sybase engineering is the primary job",
+        "Do not upgrade preferred Aladdin expertise into a mandatory gate",
+        "Do preserve explicit prior BlackRock engagement as a distinct eligibility/experience requirement"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-03",
+      "title": "Next.js / React UI Developer",
+      "role_intent": "Implement modern scalable React/Next.js front ends, especially RSC and configuration-driven dynamic layouts.",
+      "weights": {
+        "technical": 90,
+        "functional_domain": 0,
+        "operational_delivery": 10
+      },
+      "core_capabilities": [
+        "Next.js and React hands-on delivery",
+        "React Server Components (RSC), Server-Side Rendering, Static Site Generation, Client Components",
+        "Configuration-driven or metadata-driven dynamic layout and UI framework experience",
+        "JavaScript/TypeScript, HTML/CSS, state management, REST API integration",
+        "Performance, accessibility, responsive UI, Git and CI/CD"
+      ],
+      "explicit_constraints": [
+        "6+ years front-end development",
+        "3+ years hands-on Next.js and modern React"
+      ],
+      "preference_and_alternatives": [
+        "Micro-frontends, cloud, testing frameworks and headless CMS preferred",
+        "Context API, Redux and Zustand are examples of state management options"
+      ],
+      "interpretation_risks": [
+        "RSC and SSR are not interchangeable concepts",
+        "Generic React experience is not full proof of Next.js/RSC",
+        "Configuration-driven architecture is a distinct core capability"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-04",
+      "title": "Bournemouth Business Analyst / Process Consultant",
+      "role_intent": "Elicit requirements, design and document business processes, guide delivery teams and support business testing.",
+      "weights": {
+        "technical": 10,
+        "functional_domain": 65,
+        "operational_delivery": 25
+      },
+      "core_capabilities": [
+        "Business requirements elicitation and stakeholder workshops",
+        "Process mapping and modelling to stated BPNM 2.0 requirement",
+        "Functional specs, user stories and requirements traceability",
+        "Business/IT solution guidance and UAT support"
+      ],
+      "explicit_constraints": [
+        "BPNM 2.0 described as mandatory in source text",
+        "Five days onsite in Bournemouth"
+      ],
+      "preference_and_alternatives": [
+        "Agency lending, equity finance or general finance experience preferred/flexible"
+      ],
+      "interpretation_risks": [
+        "Source spells BPNM; likely BPMN but must flag as ambiguity, not silently autocorrect",
+        "Onsite requirement is eligibility verification, not CV capability score",
+        "Do not turn preferred finance specialty into required industry experience"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-05",
+      "title": "Full Stack Developer — Java with Golang",
+      "role_intent": "Build and maintain full-stack cloud-ready applications, with core backend development in both Java/Spring Boot and Go.",
+      "weights": {
+        "technical": 90,
+        "functional_domain": 0,
+        "operational_delivery": 10
+      },
+      "core_capabilities": [
+        "Java, Spring Boot, microservices",
+        "Hands-on Golang/Go backend development",
+        "Front-end implementation using Angular OR React OR other JavaScript framework",
+        "REST API design/integration, SQL/NoSQL data stores",
+        "Cloud familiarity, Docker, Kubernetes, CI/CD and engineering delivery"
+      ],
+      "explicit_constraints": [
+        "Strong Java/Spring Boot and hands-on Go are primary technologies"
+      ],
+      "preference_and_alternatives": [
+        "5+ years full stack experience listed as preferred",
+        "Recent Java + Go hands-on experience and cloud-native work listed under preferred experience",
+        "Angular OR React OR JavaScript framework; cloud AWS OR Azure OR GCP; database variants are alternatives"
+      ],
+      "interpretation_risks": [
+        "Do not accept Go-only or Java-only as fully satisfying the dual-language core",
+        "Do not require each listed frontend framework, cloud provider or database product"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-06",
+      "title": "Senior Functional Business Analyst — Pensions",
+      "role_intent": "Bridge business analysis and pensions operational SME duties during regulatory and operational transformation.",
+      "weights": {
+        "technical": 5,
+        "functional_domain": 70,
+        "operational_delivery": 25
+      },
+      "core_capabilities": [
+        "Senior functional BA requirements, process modelling, acceptance criteria and impact/gap analysis",
+        "Complex operational scheme rules, edge cases, exceptions and testable requirements",
+        "Regulated financial services change, regulatory governance and operations integration",
+        "Cross-onshore/offshore coordination, SME gap support, UAT and implementation readiness"
+      ],
+      "explicit_constraints": [
+        "7–10 years of BA experience requested",
+        "Tier 1: pensions experience plus strong BA fundamentals",
+        "Tier 2: strong senior BA with regulated-financial-services transformation; pensions experience explicitly not required"
+      ],
+      "preference_and_alternatives": [
+        "BPO/outsourcing, prior pensions SME, operational restructuring, BA certification or Agile/hybrid experience desirable",
+        "Treat Tier 1 and Tier 2 as alternative valid pathways"
+      ],
+      "interpretation_risks": [
+        "Source has tension between essential pensions text, desirable pensions knowledge and explicit Tier 2 exception; model the exception",
+        "Do not reject eligible Tier 2 candidates for missing pensions background"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-07",
+      "title": "SAP Digital Payments Add-On Consultant",
+      "role_intent": "Implement and integrate SAP Digital Payments Add-On with external payment providers, including secure transaction lifecycle and incident resolution.",
+      "weights": {
+        "technical": 70,
+        "functional_domain": 20,
+        "operational_delivery": 10
+      },
+      "core_capabilities": [
+        "SAP Digital Payments Add-On implementations in SAP ECC and S/4HANA",
+        "Payment workflow configuration: authorisation, capture, refund, void and settlement",
+        "Secure PSP gateway integrations, tokenization, encryption and card handling",
+        "Payment integration troubleshooting, root-cause analysis, end-to-end testing",
+        "SAP systems and e-commerce touchpoints; audit/compliance coordination"
+      ],
+      "explicit_constraints": [
+        "Role centered on SAP DPA specialization, not generic SAP configuration"
+      ],
+      "preference_and_alternatives": [
+        "Cybersource, Worldpay and other certified PSPs are provider examples, not a conjunctive list"
+      ],
+      "interpretation_risks": [
+        "Generic SAP FI or payment process expertise alone does not prove SAP DPA hands-on",
+        "Do not require every named PSP; weigh functional and technical integration experience"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-08",
+      "title": "Programme / Project Manager — RHEL on IBM LinuxONE",
+      "role_intent": "Lead delivery and production launch of a supported RHEL hosting service on IBM Z/LinuxONE with credible Linux and mainframe platform understanding.",
+      "weights": {
+        "technical": 45,
+        "functional_domain": 10,
+        "operational_delivery": 45
+      },
+      "core_capabilities": [
+        "Technical credibility with IBM Z/LinuxONE, LPARs, IFL, z/VM or KVM",
+        "Enterprise RHEL provisioning, patching, hardening, monitoring, backup, automation and support",
+        "Compatibility and readiness for Linux on IBM Z s390x workloads",
+        "Infrastructure service launch, SLAs, service catalogue, operating model, DR, onboarding",
+        "Pilot, technical sign-off and cross-team PM delivery/RAID"
+      ],
+      "explicit_constraints": [
+        "Genuine Linux background explicitly required",
+        "Technically credible Linux on IBM Z/LinuxONE delivery is stated best fit"
+      ],
+      "preference_and_alternatives": [
+        "Deep engineering expertise in both mainframe and Linux is explicitly not required",
+        "z/VM OR KVM virtualization approach"
+      ],
+      "interpretation_risks": [
+        "Do not substitute generic project management for genuine Linux experience",
+        "Do not equate traditional mainframe application work or x86-only Linux with proven Linux on IBM Z delivery",
+        "Must represent technical credibility without imposing deepest-engineer expectations"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-09",
+      "title": "Full Stack Web Developer — Angular / .NET / Python Paths",
+      "role_intent": "Deliver full-stack web UIs, APIs and relational data applications using one of the described technology pathways.",
+      "weights": {
+        "technical": 90,
+        "functional_domain": 0,
+        "operational_delivery": 10
+      },
+      "core_capabilities": [
+        "Full-stack web UI and backend experience, ideally 3–5 years",
+        "Angular/TypeScript/HTML/CSS and ASP.NET Core/MVC5 pathway and/or Python Django/Flask/FastAPI pathway",
+        "Web API backend .NET/.NET Core/C# expertise stated separately as core",
+        "Relational SQL Server 2019+ and ORM, Agile Azure DevOps, English"
+      ],
+      "explicit_constraints": [
+        "Full English proficiency requested",
+        "3–5 years described as ideal, not unambiguously mandatory"
+      ],
+      "preference_and_alternatives": [
+        "Analytics software, data lakehouse/Trino, Docker/RabbitMQ and event sourcing are assets only"
+      ],
+      "interpretation_risks": [
+        "Opening permits Angular OR C# OR Python frameworks; separately written core appears to require .NET/C# backend for all — mark contradiction for clarification",
+        "Do not silently require all Django, Flask and FastAPI simultaneously"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-10",
+      "title": "Solution Integration Co-Ordinator",
+      "role_intent": "Coordinate functional integration readiness, UAT, dependencies, operational test data and cutover for a large transformation across Core/Adopt teams.",
+      "weights": {
+        "technical": 20,
+        "functional_domain": 45,
+        "operational_delivery": 35
+      },
+      "core_capabilities": [
+        "Operational functional governance, design milestones and build impediment resolution",
+        "UAT scenario writing, prioritisation and country review",
+        "Integration System readiness, UAT testing-scope alignment",
+        "Integration/UAT cookbook and golden test-data readiness",
+        "Operations-focused cutover input and cross-functional dependency ownership",
+        "Guidance to Core/Adopt workstream and solution/build leads"
+      ],
+      "explicit_constraints": [
+        "No exact named technology platform specified"
+      ],
+      "preference_and_alternatives": [
+        "TD R5.0 is named project-specific template/release context, not proof of generic platform requirement"
+      ],
+      "interpretation_risks": [
+        "Do not invent SAP or another platform from external employer knowledge",
+        "Test-data preparation and personal cutover ownership differ from overseeing generic UAT",
+        "This JD repeats the earlier Jose Garcia comparison context"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-11",
+      "title": "Senior Azure DevOps Engineer",
+      "role_intent": "Design and operate Azure cloud infrastructure and delivery automation with production security, reliability and monitoring.",
+      "weights": {
+        "technical": 90,
+        "functional_domain": 0,
+        "operational_delivery": 10
+      },
+      "core_capabilities": [
+        "Azure infrastructure design and hands-on service management",
+        "Azure DevOps pipeline development, Repos/Pipelines and CI/CD",
+        "IaC via Terraform OR ARM Templates OR Bicep",
+        "Scripting PowerShell OR Bash OR Python",
+        "Docker and Kubernetes/AKS",
+        "Observability, DevSecOps, production troubleshooting, backup/DR/HA and optimization"
+      ],
+      "explicit_constraints": [
+        "7+ years overall IT with strong DevOps expertise",
+        "Microsoft Azure is central required platform"
+      ],
+      "preference_and_alternatives": [
+        "Monitoring products Prometheus/Grafana/Azure Monitor/App Insights listed as tools; distinguish example breadth from universally mandatory product set"
+      ],
+      "interpretation_risks": [
+        "Avoid treating AWS-only experience as fully equivalent to Azure",
+        "Do not require Terraform AND ARM AND Bicep, nor all scripting languages"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    },
+    {
+      "id": "JD-12",
+      "title": "Full Stack Architect — Generative AI / Agentic Systems",
+      "role_intent": "Architect and lead scalable AI-agent, RAG and LLM/SLM applications with strong Python and retrieval expertise, plus delivery leadership.",
+      "weights": {
+        "technical": 80,
+        "functional_domain": 5,
+        "operational_delivery": 15
+      },
+      "core_capabilities": [
+        "P1: AI agents, agentic workflows, RAG, prompting, advanced Python, LangChain, LangGraph and vector databases",
+        "Retrieval quality: chunking, query expansion, reranking and relevance improvements",
+        "P2: FastAPI OR Node.js services and basic/intermediate React frontend capability (Angular alternate in responsibilities)",
+        "P3: LlamaIndex and SLM/LLM integration",
+        "Scalable architectures, cloud delivery and small-team engineering leadership"
+      ],
+      "explicit_constraints": [
+        "Explicit P1/P2/P3 ordering of priority must govern requirement importance"
+      ],
+      "preference_and_alternatives": [
+        "BSc and 5+ years full-stack/AI listed in preferred education and experience, not strict universal gates",
+        "React OR Angular in frontend narrative; backend FastAPI OR Node.js in qualifications; cloud Azure OR AWS OR GCP"
+      ],
+      "interpretation_risks": [
+        "Avoid confusing full-stack architect role with primarily frontend engineering",
+        "Note tension: SLM/LLM integration placed in P3 even though central to narrative; preserve explicit P tiers and flag ambiguity",
+        "SLM in source defined as System Language Models in one section, though the term is used inconsistently; do not silently normalize"
+      ],
+      "weights_status": "provisional_expert_hypothesis_not_client_confirmed",
+      "jd_text_location": "User-provided JD in this conversation; original wording is authoritative."
+    }
+  ],
+  "cross_profile_test_cases": [
+    "Exact vs adjacent technology: SAP DPA vs generic SAP FI; Linux IBM Z vs x86-only Linux",
+    "Same job title, different actual nature: generic PM vs technical LinuxONE PM",
+    "Explicit conditional alternatives: Pensions Tier 1 or Tier 2",
+    "Logical alternates: Terraform/ARM/Bicep; React/Angular; FastAPI/Node.js",
+    "Joint requirements: Java AND Go; Docker AND Kubernetes",
+    "Requirement priority declarations: GenAI P1/P2/P3",
+    "Mandatory client background vs optional product exposure: BlackRock vs Aladdin",
+    "Contradiction detection: Web developer alternatives vs apparent universal .NET backend",
+    "Typo ambiguity: BPNM vs BPMN; no silent edits",
+    "Separate onsite/physical/availability checks from evidence-based CV match",
+    "De-duplicate repeated requirements across responsibilities and skills",
+    "Detect generic behavioral statements and avoid unsupported punctuality/reliability proof",
+    "Role-specific stage and responsibility depth: ownership vs coordination vs support",
+    "No inferred platform when target JD does not specify one"
+  ]
+}

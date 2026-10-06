@@ -3,6 +3,7 @@ import { evaluationSchema, structuredJdSchema } from './schemas.js';
 import { quoteExistsInMaskedCv } from './mask.js';
 import { reconcileRelation, conceptSurfaceForms } from './ontology.js';
 import { normalizeStructuredJd } from './requirementRules.js';
+import { normalizeJdIntelligence } from './jdIntelligence.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validateEvaluation = ajv.compile(evaluationSchema);
@@ -13,13 +14,14 @@ export function upgradeStructuredJd(value) {
   const upgraded = normalizeStructuredJd({
     role_title: value.role_title || '',
     role_summary: value.role_summary || '',
+    intelligence:value.intelligence || {},
     requirements: (value.requirements || []).map((r) => ({
       requirement_type: 'capability', minimum_count: null, count_unit: '', required_role_context: [],
       lifecycle_scope: 'not_applicable', deployment_model: 'not_applicable', exact_credential: '', version_constraint: '',
       ...r,
     })),
   });
-  return upgraded;
+  return normalizeJdIntelligence(upgraded);
 }
 
 export function validateStructuredJd(value) {
@@ -30,7 +32,7 @@ export function validateStructuredJd(value) {
 }
 
 function canonicalizeColdStructure(result) {
-  const normalizedJd = normalizeStructuredJd(result.structured_jd || { role_title:'', role_summary:'', requirements:[] });
+  const normalizedJd = upgradeStructuredJd(result.structured_jd || { role_title:'', role_summary:'', requirements:[] });
   const oldToNew = new Map();
   const requirements = (normalizedJd.requirements || []).map((req,index) => {
     const nextId = `R${index+1}`; oldToNew.set(req.id,nextId); return { ...req, id:nextId };
@@ -120,13 +122,33 @@ function augmentExplicitEvidence(result, maskedCv) {
           skills:[surface], capabilities:[], depth:'mentioned', recency_year:null, duration_months:null,
           career_context:'Explicit CV mention recovered deterministically.', project_key:'', role_context:'', lifecycle_phases:[],
         });
-        return { ...match, evidence_ids:[id], relation:'direct', support_state:'listed', inference_path:[],
-          reason:'Explicit CV mention recovered by Mimir deterministic evidence scan.' };
+        return { ...match, evidence_ids:[id], relation:'transferable', support_state:'unsettled', recovery_only:true, inference_path:[],
+          reason:'Conservative quote recovery: terminology appears in the CV, but the full responsibility, scope and ownership still require semantic verification.' };
       }
     }
     return match;
   });
   return { ...result, evidence, matches };
+}
+
+// Recovery across requirements: a validated quote relevant to R2 is still eligible
+// for R5, e.g. a BMS line containing both UAT and cutover. This is deliberately
+// a low-credit contextual signal, NOT proof of the whole requirement.
+const SHARED_ACTIONS = ['cutover','uat','migration','go-live','deployment','integration','disaster recovery','testing','audit','configuration','governance'];
+function recoverSharedEvidence(result) {
+  const matches=(result.matches||[]).map(match=>{
+    if ((match.evidence_ids||[]).length || (match.qualifying_instances||[]).length) return match;
+    const req=(result.structured_jd?.requirements||[]).find(r=>r.id===match.requirement_id);
+    if (!req || ['behavioral','factual_gate'].includes(req.requirement_type)) return match;
+    const terms=SHARED_ACTIONS.filter(t=>String(req.text||'').toLowerCase().includes(t));
+    if (!terms.length) return match;
+    const shared=(result.evidence||[]).filter(e=> e.source_type==='text' &&
+      terms.some(term=>new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/-/g,'[-\\s]?')}\\b`,'i').test(e.quote||'')));
+    if (!shared.length) return match;
+    return {...match,evidence_ids:shared.slice(0,3).map(e=>e.id),relation:'transferable',support_state:'unsettled',recovery_only:true,
+      reason:'A verified quote contains related work terminology. Partial contextual evidence only; task-specific ownership and scope are not established.'};
+  });
+  return {...result,matches};
 }
 
 function ensureOneMatchPerRequirement(result) {
@@ -145,7 +167,7 @@ function reconcileWithOntology(result) {
   const evidenceMap=new Map((result.evidence || []).map((e) => [e.id,e]));
   const matches=(result.matches || []).map((match) => {
     const req=reqMap.get(match.requirement_id);
-    if (!req || !match.evidence_ids?.length) return { ...match, reconciled_by_ontology:false };
+    if (!req || !match.evidence_ids?.length || match.recovery_only) return { ...match, reconciled_by_ontology:false };
     const items=match.evidence_ids.map((id) => evidenceMap.get(id)).filter(Boolean);
     const reconciled=reconcileRelation(req,items,match.relation,match.inference_path);
     return { ...match, relation:reconciled.relation, inference_path:reconciled.inferencePath, reconciled_by_ontology:reconciled.reconciledByOntology };
@@ -163,6 +185,7 @@ export function validateAndSanitizeModelOutput(raw, maskedCv, cachedJd=null, cvV
   result=verifyEvidenceProvenance(result,maskedCv,cvVisualAssets);
   result=ensureOneMatchPerRequirement(result);
   result=augmentExplicitEvidence(result,maskedCv);
+  result=recoverSharedEvidence(result);
   result=reconcileWithOntology(result);
   return result;
 }

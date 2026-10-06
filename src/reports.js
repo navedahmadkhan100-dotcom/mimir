@@ -138,6 +138,9 @@ export async function buildDocx(report) {
     }),
     new Paragraph({ text: `Experience: ${components.experience ?? 0}%    Skills: ${components.skills ?? 0}%    Depth: ${components.depth ?? 0}%` }),
     new Paragraph({ text: `Audit ID: ${safeText(report.auditId)}` }),
+    new Paragraph({ text: `JD Intelligence: ${safeText(report.jdIntelligence?.role_intent || 'Not available')}` }),
+    new Paragraph({ text: `Derived category weights (not client-confirmed): ${Object.entries(report.adaptiveWeighting?.categoryWeights || {}).filter(([,v])=>v>0).map(([k,v])=>`${k} ${v}%`).join(' · ') || 'Not available'}` }),
+    ...(report.adaptiveWeighting?.selected_pathway ? [new Paragraph({ text: `Selected valid sourcing pathway: ${safeText(report.adaptiveWeighting.selected_pathway)}` })] : []),
     new Paragraph({ text: '' }),
     new Paragraph({ text: 'Proof Matrix', heading: HeadingLevel.HEADING_1 }),
   ];
@@ -244,6 +247,9 @@ export async function buildPdf(report) {
     const components = report.componentBreakdown || {};
     doc.fontSize(9.5).fillColor('#4B5563').text(`Experience ${components.experience ?? 0}%   •   Skills ${components.skills ?? 0}%   •   Depth ${components.depth ?? 0}%`);
     doc.fontSize(8.5).fillColor('#6B7280').text(`Audit ID: ${safeText(report.auditId)}`);
+    if (report.jdIntelligence?.role_intent) line('JD role intent', report.jdIntelligence.role_intent);
+    if (report.adaptiveWeighting?.categoryWeights) line('Derived JD weights (not client-confirmed)',Object.entries(report.adaptiveWeighting.categoryWeights).filter(([,v])=>v>0).map(([k,v])=>`${k} ${v}%`).join(' | '));
+    if (report.adaptiveWeighting?.selected_pathway) line('Scoring pathway',report.adaptiveWeighting.selected_pathway);
 
     heading('Proof Matrix', 15);
     for (const row of report.breakdownTable || []) {
@@ -255,6 +261,7 @@ export async function buildPdf(report) {
       line('Why', row.reason);
       const path = pathText(row.inference_path);
       if (path) line('Path', path);
+      if (row.weight_percent != null) line('JD importance', `${safeText(row.intelligence_category)} · ${safeText(row.importance)} · ${row.weight_percent}% share of score`);
       if (row.score_lineage) line('Score lineage', `base ${row.score_lineage.base_points} · policy cap ${row.score_lineage.policy_cap} · final credit ${row.score_lineage.credit_after_policy} · contribution ${row.score_lineage.final_score_points ?? 0} points`);
       doc.strokeColor('#E5E7EB').moveTo(46, doc.y + 4).lineTo(549, doc.y + 4).stroke();
     }

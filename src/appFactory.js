@@ -19,6 +19,8 @@ import { buildEvidenceIntelligenceRecord, EVIDENCE_INTELLIGENCE_VERSION } from '
 import { buildGovernancePacket, GOVERNANCE_VERSION } from './governance.js';
 import { buildEvidenceGraph, EVIDENCE_GRAPH_VERSION } from './evidenceGraph.js';
 import { auditStructuredJd, JD_AUDIT_VERSION } from './jdAudit.js';
+import { normalizeJdIntelligence, jdIntelligenceSummary, JD_INTELLIGENCE_VERSION } from './jdIntelligence.js';
+import { effectiveAssessmentMode } from './scoring.js';
 import { buildDocx, buildPdf } from './reports.js';
 import {
   SECURITY_VERSION,
@@ -174,6 +176,7 @@ export function createMimirApp(options = {}) {
   });
   app.use('/api', apiLimiter);
   app.use('/api/evaluate', evaluationLimiter);
+  app.use('/api/jd/analyze', evaluationLimiter);
   app.use('/api/export', exportLimiter);
 
 
@@ -183,7 +186,7 @@ export function createMimirApp(options = {}) {
     res.json({
       ok: true,
       app: 'Mimir — Find the Worthy',
-      version: '4.5.0',
+      version: '4.6.0',
       architecture: 'Document Intelligence + Claim Entailment + Evidence Boundaries + Odin + Evidence Policy + Deterministic Score Lineage + Verification Intelligence',
       model: MODEL_ID,
       promptVersion: PROMPT_VERSION,
@@ -199,6 +202,7 @@ export function createMimirApp(options = {}) {
       aiGatewayVersion: AI_GATEWAY_VERSION,
       evidenceGraphVersion: EVIDENCE_GRAPH_VERSION,
       jdAuditVersion: JD_AUDIT_VERSION,
+      jdIntelligenceVersion:JD_INTELLIGENCE_VERSION,
       securityVersion: SECURITY_VERSION,
       referenceYear: REFERENCE_YEAR,
       persistence: 'browser-local-only',
@@ -213,6 +217,32 @@ export function createMimirApp(options = {}) {
   app.post('/api/extract', (_req, res) => res.status(410).json({
     error: 'Raw document upload is disabled. Use browser document intelligence and send prepared text/visual evidence to /api/evaluate.',
   }));
+
+  // JD-only analysis: the candidate CV is NEVER present in this request or model call.
+  app.post('/api/jd/analyze', async (req, res) => {
+    try {
+      if (!req.body?.privacy?.clientPrepared) return res.status(400).json({ error:'Client privacy preparation is required.' });
+      const jdRaw = String(req.body.jdText || '').trim();
+      if (!jdRaw) return res.status(400).json({ error:'Job description is required.' });
+      assertEvaluationTextLimits({ jdText:jdRaw });
+      const assets=decodePreparedVisualAssets({ jdVisualAssets:req.body.jdVisualAssets || [] })
+        .filter((a)=>a.documentKind==='JD').map((a)=>({ ...a, hash:sha256(a.base64) }));
+      const masked=maskJdText(jdRaw);
+      const jdHash=sha256(`${normalizeForHash(masked.maskedText)}|visual:${assets.map((a)=>a.hash).join('|')}`);
+      const gateway=extractor();
+      const run=await gateway.structureJd(structureJdPrompt(masked.maskedText),assets);
+      const structuredJd=canonicalizeStructuredJd(run.json);
+      const jdAudit=auditStructuredJd(structuredJd);
+      return res.json({ jdHash, structuredJd, jdIntelligence:jdIntelligenceSummary(structuredJd,effectiveAssessmentMode), jdAudit,
+        analysisMeta:{ model:MODEL_ID, promptVersion:JD_STRUCTURE_PROMPT_VERSION, intelligenceVersion:JD_INTELLIGENCE_VERSION,
+          usage:run.usage || null, interactionId:run.interactionId || null, candidateDataSent:false } });
+    } catch (error) {
+      console.error('[Mimir JD intelligence error]',error?.stack || error?.message || error);
+      const message=error?.message || 'JD Intelligence analysis failed.';
+      const clientError=/required|invalid|unsupported|schema|document|visual|too large|exceeds|too many|payload/i.test(message);
+      return res.status(clientError?400:500).json({error:clientError?message:'JD Intelligence analysis failed.'});
+    }
+  });
 
   app.post('/api/evaluate', async (req, res) => {
     try {
@@ -262,6 +292,7 @@ export function createMimirApp(options = {}) {
       const llm = await gateway.evaluate(prompt, cvVisualAssets);
       const sanitized = validateAndSanitizeModelOutput(llm.json, cvMasked.maskedText, structuredJd, cvVisualAssets);
       const jdAudit = auditStructuredJd(structuredJd);
+      const jdIntelligence = jdIntelligenceSummary(structuredJd,effectiveAssessmentMode);
 
       // Mimir Evidence Intelligence pipeline. The model extracts semantics; deterministic code decides what the evidence is permitted to establish.
       const claimModel = buildClaimModel(structuredJd);
@@ -295,6 +326,7 @@ export function createMimirApp(options = {}) {
         aiGatewayVersion: AI_GATEWAY_VERSION,
         evidenceGraphVersion: EVIDENCE_GRAPH_VERSION,
         jdAuditVersion: JD_AUDIT_VERSION,
+        jdIntelligenceVersion: JD_INTELLIGENCE_VERSION,
         securityVersion: SECURITY_VERSION,
         referenceYear: REFERENCE_YEAR,
       }));
@@ -317,6 +349,7 @@ export function createMimirApp(options = {}) {
         aiGatewayVersion: AI_GATEWAY_VERSION,
         evidenceGraphVersion: EVIDENCE_GRAPH_VERSION,
         jdAuditVersion: JD_AUDIT_VERSION,
+        jdIntelligenceVersion: JD_INTELLIGENCE_VERSION,
         securityVersion: SECURITY_VERSION,
         scoringReferenceYear: REFERENCE_YEAR,
         generatedAt: new Date().toISOString(),
@@ -355,6 +388,8 @@ export function createMimirApp(options = {}) {
         evidenceSemantics,
         evidenceGraph,
         jdAudit,
+        jdIntelligence,
+        adaptiveWeighting:score.adaptiveWeighting,
         claimAssessments,
         policyDecisions,
         odinChallenges,

@@ -1,6 +1,7 @@
 import { evidenceSupportsConcept } from './ontology.js';
+import { deriveAdaptiveWeights, JD_INTELLIGENCE_VERSION } from './jdIntelligence.js';
 
-export const SCORING_VERSION = '4.0.0-evidence-policy-lineage';
+export const SCORING_VERSION = '4.6.0-jd-adaptive-evidence-lineage';
 
 export const RELATION_BASE = Object.freeze({
   direct:100, canonical:98, equivalent:96, implied:90, functional:86, transferable:70, adjacent:45, none:0,
@@ -13,7 +14,7 @@ export const DEPTH_ADJUSTMENT = Object.freeze({ led:4, owned:2, used:0, mentione
 export const DEPTH_SCORE = Object.freeze({ led:100, owned:92, used:80, mentioned:55, unknown:70 });
 export const PRIORITY_WEIGHTS = Object.freeze({ dealbreaker:5, critical:5, required:4, standard:3, nice_to_have:0 });
 
-const GENERIC_BEHAVIORAL_RE=/\b(?:excellent|strong|good|effective)?\s*(?:written\s+and\s+verbal\s+)?communication|\bteam\s*player\b|\binterpersonal\b|\bself[-\s]?motivated\b|\bproactive\b|\badaptab|\battention to detail\b|\bwork(?:ing)? independently\b|\bcollaborative\b|\bcollaboration skills\b|\bpeople skills\b|\bpositive attitude\b/i;
+const GENERIC_BEHAVIORAL_RE=/\b(?:communication skills|interpersonal skills|team player|self[-\s]?motivated|punctual(?:ity)?|reliab(?:le|ility)|attention to detail|positive attitude|collaboration skills|people skills|adaptability)\b/i;
 const WORK_AUTH_RE=/\b(?:work authori[sz]ation|right to work|eligible to work|visa|sponsorship|security clearance|clearance required|sc\s+clear(?:ed|ance)|dv\s+clear(?:ed|ance)|bpss|developed\s+vetting|ctc\s+clear(?:ed|ance))\b/i;
 const LOCATION_GATE_RE=/\b(?:must be based|must reside|onsite|on-site|hybrid.*days|relocation required|within commuting distance)\b/i;
 const LANGUAGE_LEVEL_RE=/\b(?:A1|A2|B1|B2|C1|C2|CEFR|native|fluent|business fluent|professional working proficiency)\b/i;
@@ -35,12 +36,15 @@ export function recencyAdjustment(recencyYear,referenceYear){
 
 export function effectiveAssessmentMode(req){
   if ((req.priority || 'standard')==='nice_to_have') return 'exclude';
+  if (req.assessment_hint === 'exclude') return 'exclude';
+  if (req.assessment_hint === 'gate' || req.intelligence_category === 'eligibility') return 'gate';
+  if (req.assessment_hint === 'verify' && ['behavioral','factual_gate'].includes(req.requirement_type)) return req.requirement_type === 'behavioral' ? 'verify' : 'gate';
   const text=req.text || ''; const category=req.category || 'other';
   if (req.requirement_type==='factual_gate') return 'gate';
   if (category==='work_authorization' || WORK_AUTH_RE.test(text)) return 'gate';
   if (category==='location' || LOCATION_GATE_RE.test(text)) return 'gate';
   if (category==='language' && LANGUAGE_LEVEL_RE.test(text)) return 'gate';
-  if (req.requirement_type==='behavioral' || category==='behavioral' || GENERIC_BEHAVIORAL_RE.test(text)) return 'verify';
+  if (req.requirement_type==='behavioral' || category==='behavioral' || req.intelligence_category==='behavioral' || GENERIC_BEHAVIORAL_RE.test(text)) return 'verify';
   if ((category==='certification' || category==='education') && req.priority==='dealbreaker') return 'gate';
   return 'score';
 }
@@ -118,6 +122,16 @@ function lifecycleCap(req,match){
   return { cap:(match?.evidence_ids||[]).length?35:0, coverage:0 };
 }
 
+function allOfConstraintCap(req, match, evidenceMap) {
+  const targets = [...new Set((req.target_concepts || []).map(x => String(x).trim()).filter(Boolean))];
+  if (req.requirement_logic !== 'all_of' || targets.length < 2) return { cap:100, matched:targets.length, required:targets.length };
+  const items=[...new Set(match?.evidence_ids || [])].map(id => evidenceMap.get(id)).filter(Boolean);
+  const satisfied=targets.filter(target=>items.some(e=>evidenceSupportsConcept(e,target,'equivalent')));
+  const fraction=satisfied.length / targets.length;
+  return {cap:satisfied.length===targets.length ? 100 : Math.round(10+75*fraction), matched:satisfied.length, required:targets.length,
+    missing:targets.filter(target=>!satisfied.includes(target))};
+}
+
 function requirementCredit(req,match,selected,evidenceMap,referenceYear){
   const relation=match?.relation||'none'; const support=match?.support_state||'missing';
   if (support==='missing'||support==='contradicted'||relation==='none') return { credit:0, constraints:{} };
@@ -143,12 +157,15 @@ function requirementCredit(req,match,selected,evidenceMap,referenceYear){
 
   const countInfo=countConstraintCap(req,match,evidenceMap); if(countInfo.required!==null) value=Math.min(value,countInfo.cap);
   const lifeInfo=lifecycleCap(req,match); if(req.lifecycle_scope==='end_to_end') value=Math.min(value,lifeInfo.cap);
+  const conjunction=allOfConstraintCap(req,match,evidenceMap);
+  if (req.requirement_logic==='all_of') value=Math.min(value,conjunction.cap);
 
-  return { credit:clamp(Math.round(value)), constraints:{ count:countInfo, lifecycle:lifeInfo, durationCap } };
+  return { credit:clamp(Math.round(value)), constraints:{ count:countInfo, lifecycle:lifeInfo, durationCap, allOf:conjunction } };
 }
 
 function gateState(match){
-  if(!match||match.support_state==='contradicted') return 'failed';
+  if(match?.support_state==='contradicted') return 'failed';
+  if (!match || !match.evidence_ids?.length) return 'verify';
   if(['direct','canonical','equivalent'].includes(match.relation)&&['documented','listed'].includes(match.support_state)) return 'passed';
   return 'verify';
 }
@@ -160,17 +177,43 @@ function displayState(mode,match,credit){
 }
 function componentForRequirement(req){if(['experience','responsibility'].includes(req.category)||['counted_experience','minimum_duration','role_context','lifecycle'].includes(req.requirement_type))return'experience';if(req.category==='depth')return'depth';return'skills';}
 
+function selectedPathwayAndWeights(structuredJd, matchMap, evidenceMap, policyMap, referenceYear) {
+  if (structuredJd.intelligence?.profile_version !== JD_INTELLIGENCE_VERSION) return { adaptive:null, pathwayResults:[], path:null };
+  const pathways = structuredJd.intelligence.pathways || [];
+  if (!pathways.length) return { adaptive:deriveAdaptiveWeights(structuredJd, effectiveAssessmentMode), pathwayResults:[], path:null };
+  const pathwayResults = pathways.map((path) => {
+    const adaptive = deriveAdaptiveWeights(structuredJd, effectiveAssessmentMode, path.id);
+    let earned=0;
+    for (const req of structuredJd.requirements || []) {
+      const w=adaptive.weightsByRequirement[req.id] || 0;
+      if (!w) continue;
+      const match=matchMap.get(req.id);
+      const evidence=selectBestEvidence(match?.evidence_ids || [], evidenceMap, referenceYear);
+      const credit=requirementCredit(req,match,evidence,evidenceMap,referenceYear).credit;
+      const cap=policyMap.get(req.id)?.credit_cap ?? 100;
+      earned += w * Math.min(credit,cap) / 100;
+    }
+    return { id:path.id,label:path.label,score:Math.round(earned),adaptive };
+  });
+  // Candidate picks the best admissible JD pathway, never a blend of mutually exclusive routes.
+  const winner = [...pathwayResults].sort((a,b)=> b.score-a.score || a.id.localeCompare(b.id))[0];
+  return { adaptive:winner.adaptive, pathwayResults:pathwayResults.map(({adaptive,...rest})=>rest),path:winner.id };
+}
+
 export function computeDeterministicScore(llmResponse,structuredJd,options={}){
   const referenceYear=Number(options.referenceYear); if(!Number.isInteger(referenceYear))throw new Error('A fixed integer referenceYear is required for deterministic scoring.');
   const matchMap=new Map((llmResponse.matches||[]).map((m)=>[m.requirement_id,m])); const evidenceMap=new Map((llmResponse.evidence||[]).map((e)=>[e.id,e]));
   const policyMap=new Map((options.policyDecisions||[]).map((p)=>[p.requirement_id,p]));
   const claimMap=new Map((options.claimAssessments||[]).map((c)=>[c.requirement_id,c]));
+  const paths=selectedPathwayAndWeights(structuredJd,matchMap,evidenceMap,policyMap,referenceYear);
   let totalWeight=0,earned=0,hasDealbreaker=false; const breakdownTable=[],gateChecks=[],verificationItems=[],constraintChecks=[];
   const componentAccumulator={skills:{total:0,earned:0},experience:{total:0,earned:0}}; let depthWeighted=0,depthWeight=0;
 
   for(const req of structuredJd.requirements||[]){
     const match=matchMap.get(req.id)||{requirement_id:req.id,evidence_ids:[],relation:'none',support_state:effectiveAssessmentMode(req)==='verify'?'not_assessable':'missing',reason:'No evidence assessment was returned.',inference_path:[],lifecycle_phases:[],qualifying_instances:[]};
-    const mode=effectiveAssessmentMode(req); const weight=PRIORITY_WEIGHTS[req.priority||'standard']??3; const selected=selectBestEvidence(match.evidence_ids,evidenceMap,referenceYear);
+    const inOtherPath = Boolean(paths.adaptive && req.pathway_ids?.length && !req.pathway_ids.includes(paths.path));
+    const mode=inOtherPath ? 'exclude' : effectiveAssessmentMode(req);
+    const weight=paths.adaptive ? (paths.adaptive.weightsByRequirement[req.id] || 0) : (PRIORITY_WEIGHTS[req.priority||'standard']??3); const selected=selectBestEvidence(match.evidence_ids,evidenceMap,referenceYear);
     const result=mode==='score'?requirementCredit(req,match,selected,evidenceMap,referenceYear):{credit:null,constraints:{}};
     const policy=policyMap.get(req.id); const claim=claimMap.get(req.id);
     const prePolicyCredit=result.credit;
@@ -187,6 +230,8 @@ export function computeDeterministicScore(llmResponse,structuredJd,options={}){
     if(mode==='verify')verificationItems.push({requirement_id:req.id,requirement_text:req.text,status:match.evidence_ids?.length?'supported':'verify',reason:match.reason});
     breakdownTable.push({
       requirement_id:req.id,requirement_text:req.text,requirement_type:req.requirement_type,category:req.category,priority:req.priority,assessment_mode:mode,
+      intelligence_category:req.intelligence_category || null, capability_name:req.capability_name || null, importance:req.importance || null, importance_reason:req.importance_reason || '',
+      weight_percent:paths.adaptive ? Number(weight.toFixed(2)) : null, pathway_ids:req.pathway_ids || [],
       relation:match.relation,support_state:match.support_state,status_label:displayState(mode,match,credit),matched_quote:selected?.quote||'',visual_observation:selected?.visual_observation||'',
       evidence_source_type:selected?.source_type||null,visual_asset_id:selected?.visual_asset_id||null,source_page:selected?.source_page??null,source_hint:selected?.source_hint||'',selected_evidence_id:selected?.id||null,
       depth:selected?.depth||null,recency_year:selected?.recency_year??null,reason:match.reason,inference_path:match.inference_path||[],qualifying_instances:match.qualifying_instances||[],
@@ -212,6 +257,13 @@ export function computeDeterministicScore(llmResponse,structuredJd,options={}){
   const experience=componentAccumulator.experience.total>0?Math.round(componentAccumulator.experience.earned/componentAccumulator.experience.total):0;
   const depth=depthWeight>0?Math.round(depthWeighted/depthWeight):0;
   let verdict='Low evidence';if(finalScore>=80)verdict='Strong fit';else if(finalScore>=65)verdict='Good fit';else if(finalScore>=50)verdict='Potential';else if(finalScore>=35)verdict='Partial fit';
+  const categoryScore = {};
+  if (paths.adaptive) for (const cat of Object.keys(paths.adaptive.categoryWeights)) {
+    const entries=breakdownTable.filter(r => r.intelligence_category===cat && r.assessment_mode==='score' && r.weight_percent>0);
+    const weightSum=entries.reduce((n,r)=>n+(r.calculation?.priority_weight||0),0);
+    categoryScore[cat]=weightSum ? Math.round(entries.reduce((n,r)=>n+(r.calculation?.priority_weight||0)*(r.calculation?.result||0),0)/weightSum) : null;
+  }
   return {finalScore,verdict,hasDealbreaker,componentBreakdown:{experience,skills,depth},breakdownTable,gateChecks,verificationItems,constraintChecks,
+    adaptiveWeighting:paths.adaptive ? { ...paths.adaptive, selected_pathway:paths.path, pathway_scores:paths.pathwayResults, category_scores:categoryScore } : null,
     scoringMeta:{scoringVersion:SCORING_VERSION,referenceYear,scoreBearingRequirements:breakdownTable.filter((r)=>r.assessment_mode==='score').length,verificationRequirements:verificationItems.length,gateRequirements:gateChecks.length,constraintChecks:constraintChecks.length}};
 }

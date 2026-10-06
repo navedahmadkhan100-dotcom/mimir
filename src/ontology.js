@@ -5,6 +5,7 @@ const ALIASES = new Map(Object.entries({
   'o365': 'microsoft 365', 'office 365': 'microsoft 365', 'm365': 'microsoft 365',
   'sccm': 'microsoft configuration manager', 'configmgr': 'microsoft configuration manager', 'mecm': 'microsoft configuration manager',
   'intune': 'microsoft intune', 'autopilot': 'windows autopilot',
+  'golang': 'go', 'go language': 'go',
   'react.js': 'react', 'reactjs': 'react', 'node.js': 'node', 'nodejs': 'node',
   'c sharp': 'c#', 'csharp': 'c#', 'dotnet': '.net', '.net core': '.net',
   'azure kubernetes service': 'aks', 'amazon elastic kubernetes service': 'eks', 'google kubernetes engine': 'gke',

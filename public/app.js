@@ -11,7 +11,8 @@ function apiUrl(path) {
 
 const $ = (id) => document.getElementById(id);
 const SAVED_JD_STORAGE_VERSION = 'mimir-v2.0.0'; // Preserve the user's existing browser JD vault.
-const ENGINE_CACHE_VERSION = 'mimir-v2.2.0-document-intelligence';
+const ENGINE_CACHE_VERSION = 'mimir-v4.6.0-jd-intelligence';
+const JD_PROFILE_VERSION = '4.6.0-jd-first-adaptive';
 const STORAGE = {
   savedJds: `${SAVED_JD_STORAGE_VERSION}:saved-jds`,
   jdStructures: `${ENGINE_CACHE_VERSION}:jd-structures`,
@@ -36,6 +37,7 @@ const state = {
   jdVisualGeneration: 0,
   cvVisualGeneration: 0,
   isEvaluating: false,
+  isAnalyzingJd: false,
   abortController: null,
   runtimeMeta: { scoringVersion: 'unknown', promptVersion: 'unknown', referenceYear: 'unknown', model: 'unknown' },
 };
@@ -510,6 +512,7 @@ let jdRefreshTimer;
 $('jdText').addEventListener('input', (event) => {
   if (event.isTrusted) {
     invalidateResult();
+    hideJdPreview();
     state.loadedSavedJd = null;
     if (state.jdFile) detachUploadedSource('jd', { edited: true });
   }
@@ -517,6 +520,8 @@ $('jdText').addEventListener('input', (event) => {
   jdRefreshTimer = setTimeout(refreshJdCacheState, 250);
 });
 
+function isCurrentJdProfile(structure) { return structure?.intelligence?.profile_version === JD_PROFILE_VERSION; }
+function hideJdPreview() { const panel = $('jdIntelligencePreview'); if (panel) { panel.classList.add('hidden'); panel.innerHTML=''; } }
 async function currentJdHash() {
   const text = normalizeText($('jdText').value);
   if (!text) return null;
@@ -535,7 +540,7 @@ async function refreshJdCacheState() {
     return;
   }
   const structures = readStore(STORAGE.jdStructures, {});
-  const hasStructure = Boolean(state.loadedSavedJd?.structuredJd || structures[hash]?.structuredJd);
+  const hasStructure = Boolean(isCurrentJdProfile(state.loadedSavedJd?.structuredJd) || isCurrentJdProfile(structures[hash]?.structuredJd));
   $('jdCacheState').textContent = hasStructure
     ? 'Structured JD ready · warm evaluation'
     : state.jdFile && Number(state.jdDocumentIntel?.visualCandidatesDetected || 0) > 0
@@ -563,6 +568,7 @@ async function saveCurrentJd() {
     rawText,
     jdHash,
     structuredJd,
+    jdIntelligence:structures[jdHash]?.jdIntelligence || null,
     sourceFileName: state.jdFile?.name || null,
     hadVisualContext: Number(state.jdDocumentIntel?.visualCandidatesDetected || 0) > 0,
     updatedAt: new Date().toISOString(),
@@ -617,6 +623,9 @@ $('savedJdsList').addEventListener('click', async (event) => {
     $('jdFile').value = '';
     setFileRemoveVisibility('jd', false);
     invalidateResult();
+    hideJdPreview();
+    const cachedIntel = item.jdIntelligence || readStore(STORAGE.jdStructures,{})[item.jdHash]?.jdIntelligence;
+    if (isCurrentJdProfile(item.structuredJd) && cachedIntel) renderJdIntelligence(cachedIntel,'jdIntelligencePreview');
     $('jdFileName').textContent = item.hadVisualContext && item.structuredJd
       ? 'Loaded structured multimodal JD from local vault'
       : item.hadVisualContext
@@ -646,15 +655,16 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeSavedModal();
 });
 
-async function updateSavedJdWithStructure(jdHash, structuredJd) {
+async function updateSavedJdWithStructure(jdHash, structuredJd, jdIntelligence=null) {
   const structures = readStore(STORAGE.jdStructures, {});
-  structures[jdHash] = { structuredJd, updatedAt: new Date().toISOString() };
+  structures[jdHash] = { structuredJd, jdIntelligence, updatedAt: new Date().toISOString() };
   writeStore(STORAGE.jdStructures, structures);
 
   const list = savedJds();
   const index = list.findIndex((item) => item.jdHash === jdHash);
   if (index >= 0) {
     list[index].structuredJd = structuredJd;
+    list[index].jdIntelligence = jdIntelligence;
     list[index].title = structuredJd.role_title || list[index].title;
     list[index].updatedAt = new Date().toISOString();
     writeStore(STORAGE.savedJds, list);
@@ -714,7 +724,7 @@ async function evaluateCandidate() {
   try {
     const jdHash = await currentJdHash();
     const structures = readStore(STORAGE.jdStructures, {});
-    const cachedStructure = state.loadedSavedJd?.structuredJd || structures[jdHash]?.structuredJd || null;
+    const cachedStructure = [structures[jdHash]?.structuredJd,state.loadedSavedJd?.structuredJd].find(isCurrentJdProfile) || null;
 
     // Text is ready immediately after upload. If diagram/chart preparation is still
     // finishing, wait briefly at evaluation time instead of freezing the upload UI.
@@ -767,7 +777,8 @@ async function evaluateCandidate() {
     persistEvidenceIntelligence(data);
     if (data.documentIntelligence?.jd?.format && data.documentIntelligence.jd.format !== 'unknown') renderDocumentIntel('jd', data.documentIntelligence.jd);
     if (data.documentIntelligence?.cv?.format && data.documentIntelligence.cv.format !== 'unknown') renderDocumentIntel('cv', data.documentIntelligence.cv);
-    await updateSavedJdWithStructure(jdHash, data.structuredJd);
+    await updateSavedJdWithStructure(jdHash, data.structuredJd, data.jdIntelligence);
+    renderJdIntelligence(data.jdIntelligence,'jdIntelligencePreview');
     renderResult(data);
     showToast('Fresh evaluation completed. Results are never replayed from a previous CV run.');
   } catch (error) {
@@ -783,6 +794,59 @@ async function evaluateCandidate() {
     setLoading(false);
   }
 }
+
+// JD-only preview: does not send or require a CV. One Gemini compilation per new JD;
+// existing versioned browser-local structures can be reused for evaluation.
+function renderJdIntelligence(profile, target='jdIntelligencePreview', scoring=null) {
+  const root=$(target);
+  if (!root) return;
+  if (!profile) { root.classList.add('hidden');root.innerHTML='';return; }
+  const categoryLabels={technical:'Technical',functional_domain:'Functional / Domain',operational_delivery:'Operational / Delivery',behavioral:'Behavioral',eligibility:'Eligibility'};
+  const weights=scoring?.categoryWeights || profile.category_weights || {};
+  const bars=Object.entries(categoryLabels).filter(([id])=>Number(weights[id]||0)>0).map(([id,label])=>{
+    const v=Math.max(0,Math.min(100,Number(weights[id]||0)));
+    return `<div class="jdi-bar-row"><span>${escapeHtml(label)}</span><div class="jdi-track"><i class="jdi-fill jdi-${escapeHtml(id)}" style="width:${v.toFixed(2)}%"></i></div><strong>${v.toFixed(1)}%</strong></div>`;
+  }).join('');
+  const capabilities=(profile.requirements||[]).filter(x=>x.assessment_mode!=='exclude').slice(0,45);
+  const rows=capabilities.map((r)=>{
+    const weight = scoring?.weightsByRequirement ? scoring.weightsByRequirement[r.id] : r.weight_percent;
+    return `<div class="jdi-cap"><span class="jdi-cap-id">${escapeHtml(r.id)}</span><div><strong>${escapeHtml(r.capability)}</strong><small>${escapeHtml(categoryLabels[r.category]||humanize(r.category))} · ${escapeHtml(r.importance)} ${r.tier!=='none'?`· ${escapeHtml(r.tier)}`:''} · ${escapeHtml(r.responsibility_level)}</small></div><b>${r.assessment_mode==='score'?`${Number(weight||0).toFixed(1)}%`:escapeHtml(humanize(r.assessment_mode))}</b></div>`;
+  }).join('');
+  const route=scoring?.selected_pathway;
+  const pathways=(profile.pathways||[]).map(p=>`<span class="jdi-path">${escapeHtml(p.label)}${route===p.id?' · selected':''}</span>`).join('');
+  const ambiguities=(profile.ambiguities||[]).slice(0,8).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  root.innerHTML=`<div class="jdi-top"><div class="section-kicker gradient-text">ROLE INTENT · JD FIRST</div><strong>${escapeHtml(profile.role_intent || 'Role intelligence')}</strong><p>${escapeHtml(profile.role_focus || 'Weights are inferred from the client JD and are open to recruiter review.')}</p></div><div class="jdi-bars">${bars||'<span>No scored capabilities extracted.</span>'}</div>${pathways?`<div class="jdi-pathways">Valid sourcing pathways: ${pathways}</div>`:''}<details class="jdi-details"><summary>Inspect ${capabilities.length} capabilities and their importance</summary><div class="jdi-capabilities">${rows}</div></details>${ambiguities?`<details class="jdi-details"><summary>${(profile.ambiguities||[]).length} JD clarification flags</summary><ul>${ambiguities}</ul></details>`:''}<p class="jdi-note">Derived importance, not employer-provided percentages. Generic traits and unverified eligibility do not receive unexplained zero scores.</p>`;
+  root.classList.remove('hidden');
+}
+
+async function analyzeJdOnly() {
+  if (state.isAnalyzingJd || state.isEvaluating) return;
+  clearError();
+  const jdText=$('jdText').value.trim();
+  if (!jdText) return showError('Paste or upload a JD before requesting JD Intelligence.');
+  if (jdText.length > MIMIR_MAX_JD_CHARS) return showError('JD exceeds the configured size limit.');
+  const button=$('analyzeJdBtn');
+  state.isAnalyzingJd=true;button.disabled=true;button.textContent='Understanding this role…';
+  try {
+    const jdHash=await currentJdHash();
+    const structures=readStore(STORAGE.jdStructures,{});
+    const saved=state.loadedSavedJd?.jdIntelligence ? state.loadedSavedJd : structures[jdHash];
+    if (isCurrentJdProfile(saved?.structuredJd) && saved?.jdIntelligence) {
+      renderJdIntelligence(saved.jdIntelligence);showToast('JD Intelligence loaded from this browser.');return;
+    }
+    if (state.jdVisualStatus==='processing') await waitForVisualPreparation({includeJd:true,maxWaitMs:6000});
+    const payload=fitEvaluationPayload({jdText,jdVisualAssets:state.jdVisualAssets,cvVisualAssets:[],privacy:{clientPrepared:true,firewallVersion:window.MimirPrivacy?.rulesVersion || 'unknown',documentEngineVersion:window.MimirDocumentClient?.version || 'unknown'}});
+    const response=await fetch(apiUrl('/api/jd/analyze'),{method:'POST',headers:{'Content-Type':'application/json'},body:payload.json,cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(data.error||`JD Intelligence failed (HTTP ${response.status}).`);
+    await updateSavedJdWithStructure(jdHash,data.structuredJd,data.jdIntelligence);
+    renderJdIntelligence(data.jdIntelligence);
+    refreshJdCacheState();
+    showToast('JD understood and stored locally. CV evaluation will reuse this structure.');
+  } catch(e) { showError(e.message||'Unable to analyze the JD.'); }
+  finally {state.isAnalyzingJd=false;button.disabled=false;button.innerHTML='✧ Understand this JD <span>→</span>';}
+}
+$('analyzeJdBtn').addEventListener('click',analyzeJdOnly);
 
 function cancelEvaluation() {
   if (!state.isEvaluating) return;
@@ -1010,6 +1074,8 @@ function renderResult(result) {
     $(`${key}Bar`).style.width = `${value}%`;
   }
 
+  renderJdIntelligence(result.jdIntelligence,'jdIntelligenceResultsBody',result.adaptiveWeighting);
+  $('jdIntelligenceResults').classList.toggle('hidden',!result.jdIntelligence);
   renderSignals(result);
   renderJdAudit(result);
   renderClaims(result);
@@ -1159,6 +1225,7 @@ async function loadRuntimeMeta() {
       entailmentVersion: data.entailmentVersion || 'unknown',
       odinVersion: data.odinVersion || 'unknown',
       policyVersion: data.policyVersion || 'unknown',
+      jdIntelligenceVersion:data.jdIntelligenceVersion || 'unknown',
     };
   } catch {
     // The evaluator will surface network errors when the user runs an evaluation.

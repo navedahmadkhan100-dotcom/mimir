@@ -1,4 +1,4 @@
-# Mimir v4.4.4 — Text-First, Visual-Fidelity Reference Architecture
+# Mimir v4.6.0 — JD-First Intelligence + Text-First Evidence Architecture
 
 ```text
                          JOB DESCRIPTION
@@ -11,7 +11,9 @@
                      JD privacy preparation
                                │
                                ▼
-                     JD STRUCTURE FREEZE
+                JD INTELLIGENCE COMPILATION
+         (role intent / capability grouping / priorities)
+              DETERMINISTIC ADAPTIVE WEIGHTS
                    (candidate CV not present)
                                │
                                │
@@ -151,3 +153,10 @@ AI never directly assigns Mimir's final candidate score.
 ## Important residual boundaries
 
 See `SECURITY_AUDIT.md`. In particular, the public evaluation API still needs a bot challenge/authentication for stronger quota-abuse resistance, and visual non-text identity such as faces is not yet guaranteed to be detected locally.
+
+
+## v4.6 JD Intelligence upgrade
+
+A recruiter may now run `/api/jd/analyze` with **only a JD**, rendering the role intent and normalized, auditable category weights before uploading any CV. Gemini supplies role semantics, requirement classification, priority reasons, responsibility depth, acceptable equivalent evidence, known insufficiencies, JD ambiguities and alternative candidate pathways. See `docs/JD_INTELLIGENCE_V4_6.md`.
+
+The deterministic scorer uses normalized per-capability weights when the JD profile is v4.6 and retains backward-compatibility for legacy structures. Existing candidate evidence provenance, Claim Model, Odin, constraints, governance and report exports remain intact.

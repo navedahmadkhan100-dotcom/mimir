@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { evaluationSchema, structuredJdSchema } from './schemas.js';
+import { evaluationSchema, jdIntelligenceGenerationSchema } from './schemas.js';
 import { SYSTEM_INSTRUCTION } from './prompt.js';
 
 export const MODEL_ID = 'gemini-3.5-flash-lite';
@@ -61,7 +61,7 @@ export class GeminiExtractor {
   }
 
   async structureJd(prompt, visualAssets = []) {
-    const interaction = await this.runInteraction(prompt, visualAssets, structuredJdSchema);
+    const interaction = await this.runInteraction(prompt, visualAssets, jdIntelligenceGenerationSchema);
     return {
       json: parseJsonOutput(interaction, 'JD structure'),
       usage: interaction.usage || null,

@@ -1,4 +1,4 @@
-export const JD_AUDIT_VERSION = '4.0.0-requirement-audit';
+export const JD_AUDIT_VERSION = '4.6.0-requirement-audit';
 
 const MUST_RE=/\b(?:mandatory|must|required|essential|deal[-\s]?breaker)\b/i;
 const PREFERRED_RE=/\b(?:preferred|desirable|nice\s+to\s+have|bonus)\b/i;
@@ -26,6 +26,9 @@ export function auditStructuredJd(structuredJd = {}) {
     if (Number(req.minimum_years) > 15) {
       issues.push({ requirement_id:req.id, severity:'low', code:'HIGH_DURATION_THRESHOLD', message:'Very high duration threshold may exclude capable candidates; confirm business necessity.' });
     }
+  }
+  for (const ambiguity of structuredJd.intelligence?.ambiguities || []) {
+    issues.push({ requirement_id:'JD', severity:'medium', code:'JD_AMBIGUITY', message:String(ambiguity).slice(0,300) });
   }
   return {
     version:JD_AUDIT_VERSION,

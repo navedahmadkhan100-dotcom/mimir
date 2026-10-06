@@ -25,6 +25,21 @@ export const LIFECYCLE_PHASE_ENUM = [
   'testing','cutover','go_live','hypercare_stabilisation','operations','unknown',
 ];
 
+const jdPathwaySchema = {
+  type: 'object',
+  properties: { id:{type:'string'}, label:{type:'string'}, explanation:{type:'string'} },
+  required: ['id','label','explanation'], additionalProperties:false,
+};
+const jdIntelligenceSchema = {
+  type:'object',
+  properties: {
+    role_intent:{type:'string'}, role_family:{type:'string'}, role_focus:{type:'string'},
+    ambiguities:{type:'array',items:{type:'string'}}, pathways:{type:'array',items:jdPathwaySchema},
+    weighting_source:{type:'string'}, profile_version:{type:'string'},
+  },
+  required:['role_intent','role_family','role_focus','ambiguities','pathways'],
+  additionalProperties:false,
+};
 const requirementSchema = {
   type: 'object',
   properties: {
@@ -47,6 +62,17 @@ const requirementSchema = {
     deployment_model: { type: 'string', enum: DEPLOYMENT_MODEL_ENUM },
     exact_credential: { type: 'string' },
     version_constraint: { type: 'string' },
+    capability_name:{type:'string'},
+    intelligence_category:{type:'string',enum:['technical','functional_domain','operational_delivery','behavioral','eligibility']},
+    importance:{type:'string',enum:['decisive','high','medium','supporting','optional']},
+    importance_reason:{type:'string'},
+    explicit_tier:{type:'string',enum:['P1','P2','P3','none']},
+    capability_group:{type:'string'},
+    responsibility_level:{type:'string',enum:['own','lead','execute','coordinate','support','knowledge','unspecified']},
+    evidence_equivalents:{type:'array',items:{type:'string'}},
+    partial_evidence:{type:'array',items:{type:'string'}},
+    non_equivalents:{type:'array',items:{type:'string'}},
+    pathway_ids:{type:'array',items:{type:'string'}},
   },
   required: [
     'id','text','category','priority','priority_basis','assessment_hint','strictness','requirement_logic',
@@ -61,6 +87,7 @@ export const structuredJdSchema = {
   properties: {
     role_title: { type: 'string' },
     role_summary: { type: 'string' },
+    intelligence:jdIntelligenceSchema,
     requirements: { type: 'array', items: requirementSchema },
   },
   required: ['role_title','role_summary','requirements'],
@@ -141,3 +168,14 @@ export const evaluationSchema = {
   required: ['structured_jd','evidence','matches'],
   additionalProperties: false,
 };
+
+// New JD-only AI requests REQUIRE the semantic fields. Warm evaluation/cached
+// legacy objects continue to use the backward-compatible structuredJdSchema.
+export const jdIntelligenceGenerationSchema = structuredClone(structuredJdSchema);
+jdIntelligenceGenerationSchema.required = [...jdIntelligenceGenerationSchema.required, 'intelligence'];
+jdIntelligenceGenerationSchema.properties.requirements.items.required = [
+  ...jdIntelligenceGenerationSchema.properties.requirements.items.required,
+  'capability_name', 'intelligence_category', 'importance', 'importance_reason',
+  'explicit_tier', 'capability_group', 'responsibility_level',
+  'evidence_equivalents', 'partial_evidence', 'non_equivalents', 'pathway_ids',
+];
