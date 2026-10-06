@@ -168,8 +168,12 @@ function setLoading(loading) {
   const arrow = button.querySelector('.button-arrow');
   button.disabled = false;
   button.classList.toggle('cancel-mode', loading);
-  $('evaluateBtnText').textContent = loading ? 'Cancel evaluation' : 'Find the Worthiness';
-  if (arrow) arrow.textContent = loading ? '×' : '→';
+  button.classList.toggle('is-loading', loading);
+  button.setAttribute('aria-busy', String(loading));
+  button.setAttribute('aria-label', loading ? 'Cancel evaluation' : 'Find the Worthiness — evaluate the CV against this JD');
+  button.title = loading ? 'Cancel evaluation' : 'Find the Worthiness';
+  $('evaluateBtnText').innerHTML = loading ? 'Cancel' : 'Find the<br>Worthiness';
+  if (arrow) arrow.textContent = loading ? '×' : '↗';
   document.body.classList.toggle('is-evaluating', loading);
 
   if (loading) {
@@ -521,7 +525,27 @@ $('jdText').addEventListener('input', (event) => {
 });
 
 function isCurrentJdProfile(structure) { return structure?.intelligence?.profile_version === JD_PROFILE_VERSION; }
-function hideJdPreview() { const panel = $('jdIntelligencePreview'); if (panel) { panel.classList.add('hidden'); panel.innerHTML=''; } }
+function setJdInsightExpanded(expanded) {
+  const panel = $('jdIntelligencePanel');
+  const toggle = $('jdIntelligenceToggle');
+  const content = $('jdIntelligenceBody');
+  if (!panel || !toggle || !content) return;
+  const open = Boolean(expanded) && !panel.classList.contains('hidden');
+  panel.classList.toggle('is-expanded', open);
+  toggle.setAttribute('aria-expanded', String(open));
+  content.setAttribute('aria-hidden', String(!open));
+  content.inert = !open;
+  $('jdIntelligenceToggleText').textContent = open ? 'Collapse insights' : 'Expand insights';
+}
+function hideJdPreview() {
+  setJdInsightExpanded(false);
+  const preview = $('jdIntelligencePreview');
+  if (preview) { preview.classList.add('hidden'); preview.innerHTML = ''; }
+  $('jdIntelligencePanel')?.classList.add('hidden');
+}
+$('jdIntelligenceToggle').addEventListener('click', () => {
+  setJdInsightExpanded($('jdIntelligenceToggle').getAttribute('aria-expanded') !== 'true');
+});
 async function currentJdHash() {
   const text = normalizeText($('jdText').value);
   if (!text) return null;
@@ -817,6 +841,15 @@ function renderJdIntelligence(profile, target='jdIntelligencePreview', scoring=n
   const ambiguities=(profile.ambiguities||[]).slice(0,8).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
   root.innerHTML=`<div class="jdi-top"><div class="section-kicker gradient-text">ROLE INTENT · JD FIRST</div><strong>${escapeHtml(profile.role_intent || 'Role intelligence')}</strong><p>${escapeHtml(profile.role_focus || 'Weights are inferred from the client JD and are open to recruiter review.')}</p></div><div class="jdi-bars">${bars||'<span>No scored capabilities extracted.</span>'}</div>${pathways?`<div class="jdi-pathways">Valid sourcing pathways: ${pathways}</div>`:''}<details class="jdi-details"><summary>Inspect ${capabilities.length} capabilities and their importance</summary><div class="jdi-capabilities">${rows}</div></details>${ambiguities?`<details class="jdi-details"><summary>${(profile.ambiguities||[]).length} JD clarification flags</summary><ul>${ambiguities}</ul></details>`:''}<p class="jdi-note">Derived importance, not employer-provided percentages. Generic traits and unverified eligibility do not receive unexplained zero scores.</p>`;
   root.classList.remove('hidden');
+  if (target === 'jdIntelligencePreview') {
+    const panel = $('jdIntelligencePanel');
+    const freshlyRevealed = panel?.classList.contains('hidden');
+    panel?.classList.remove('hidden');
+    if (freshlyRevealed) {
+      setJdInsightExpanded(false);
+      requestAnimationFrame(() => requestAnimationFrame(() => setJdInsightExpanded(true)));
+    }
+  }
 }
 
 async function analyzeJdOnly() {
@@ -832,7 +865,7 @@ async function analyzeJdOnly() {
     const structures=readStore(STORAGE.jdStructures,{});
     const saved=state.loadedSavedJd?.jdIntelligence ? state.loadedSavedJd : structures[jdHash];
     if (isCurrentJdProfile(saved?.structuredJd) && saved?.jdIntelligence) {
-      renderJdIntelligence(saved.jdIntelligence);showToast('JD Intelligence loaded from this browser.');return;
+      renderJdIntelligence(saved.jdIntelligence);setJdInsightExpanded(true);showToast('JD Intelligence loaded from this browser.');return;
     }
     if (state.jdVisualStatus==='processing') await waitForVisualPreparation({includeJd:true,maxWaitMs:6000});
     const payload=fitEvaluationPayload({jdText,jdVisualAssets:state.jdVisualAssets,cvVisualAssets:[],privacy:{clientPrepared:true,firewallVersion:window.MimirPrivacy?.rulesVersion || 'unknown',documentEngineVersion:window.MimirDocumentClient?.version || 'unknown'}});
@@ -844,7 +877,7 @@ async function analyzeJdOnly() {
     refreshJdCacheState();
     showToast('JD understood and stored locally. CV evaluation will reuse this structure.');
   } catch(e) { showError(e.message||'Unable to analyze the JD.'); }
-  finally {state.isAnalyzingJd=false;button.disabled=false;button.innerHTML='✧ Understand this JD <span>→</span>';}
+  finally {state.isAnalyzingJd=false;button.disabled=false;button.innerHTML='<span class="jd-action-label"><span class="jd-action-spark" aria-hidden="true">✧</span> Understand this JD</span><span class="jd-action-chevron" aria-hidden="true">↗</span>';}
 }
 $('analyzeJdBtn').addEventListener('click',analyzeJdOnly);
 
@@ -919,25 +952,35 @@ function renderEvidenceMatrix(rows = []) {
         <div>${escapeHtml(lineage.formula || '')}</div>
       </details>` : '';
     return `
-      <article class="evidence-row">
-        <div class="evidence-main">
+      <article class="evidence-row ${stateClass(row)}">
+        <div class="evidence-row-top">
           <div class="req-id">${escapeHtml(row.requirement_id)}</div>
           <div class="req-copy">
+            <span class="field-label">What the role requires</span>
             <strong>${escapeHtml(row.requirement_text)}</strong>
             <div class="req-tags">${tags.map((tag) => `<span class="tiny-tag">${escapeHtml(tag)}</span>`).join('')}</div>
           </div>
-          <div class="state-cell">
+          <div class="state-cell" aria-label="Evidence classification">
             <span class="state-pill ${stateClass(row)}">${escapeHtml(stateLabel(row))}</span>
             <span class="relation-pill">${escapeHtml(humanize(row.relation))}</span>
           </div>
-          <div class="evidence-quote ${(row.matched_quote || row.visual_observation) ? '' : 'empty'}">
-            ${row.evidence_source_type === 'visual'
-              ? `<span class="visual-source-badge">VISUAL${row.source_page ? ` · PAGE ${escapeHtml(row.source_page)}` : ''}${row.visual_asset_id ? ` · ${escapeHtml(row.visual_asset_id)}` : ''}</span><span>${escapeHtml(row.visual_observation || evidenceFallback(row))}</span>`
-              : escapeHtml(row.matched_quote || evidenceFallback(row))}
-          </div>
-          <div class="why-cell">${escapeHtml(row.reason || 'No explanation returned.')}${lineageHtml}</div>
         </div>
-        ${path ? `<div class="path-line"><strong>Evidence path:</strong> ${path}</div>` : ''}
+        <div class="evidence-row-grid">
+          <div class="evidence-block evidence-proof-block">
+            <span class="field-label">CV evidence ${row.evidence_source_type === 'visual' ? '· verified visual' : '· quoted text'}</span>
+            <blockquote class="evidence-quote ${(row.matched_quote || row.visual_observation) ? '' : 'empty'}">
+              ${row.evidence_source_type === 'visual'
+                ? `<span class="visual-source-badge">VISUAL${row.source_page ? ` · PAGE ${escapeHtml(row.source_page)}` : ''}${row.visual_asset_id ? ` · ${escapeHtml(row.visual_asset_id)}` : ''}</span><span>${escapeHtml(row.visual_observation || evidenceFallback(row))}</span>`
+                : escapeHtml(row.matched_quote || evidenceFallback(row))}
+            </blockquote>
+          </div>
+          <div class="evidence-block evidence-reason-block">
+            <span class="field-label">Mimir’s interpretation</span>
+            <p class="why-cell">${escapeHtml(row.reason || 'No explanation returned.')}</p>
+            ${lineageHtml}
+          </div>
+        </div>
+        ${path ? `<div class="path-line"><strong>Capability connection:</strong> ${path}</div>` : ''}
       </article>`;
   }).join('');
 }
@@ -962,7 +1005,7 @@ function renderJdAudit(result) {
   const panel = $('jdAuditPanel');
   panel.classList.toggle('hidden', !issues.length);
   if (!issues.length) { $('jdAuditList').innerHTML = ''; return; }
-  $('jdAuditList').innerHTML = issues.map((issue) => `<article class="odin-item"><div class="odin-meta"><span class="odin-code">${escapeHtml(issue.requirement_id || 'JD')} · ${escapeHtml(issue.code || 'AUDIT')}</span><span class="odin-severity">${escapeHtml(issue.severity || 'review')}</span></div><strong>Requirement audit</strong><p>${escapeHtml(issue.message || issue.reason || '')}</p></article>`).join('');
+  $('jdAuditList').innerHTML = issues.map((issue) => `<article class="odin-item"><div class="odin-meta"><span class="odin-code">${escapeHtml(issue.requirement_id || 'JD')} · ${escapeHtml(issue.code || 'AUDIT')}</span><span class="odin-severity">${escapeHtml(issue.severity || 'review')}</span></div><strong>JD wording to clarify</strong><p>${escapeHtml(issue.message || issue.reason || '')}</p></article>`).join('');
 }
 
 function renderClaims(result) {
@@ -975,7 +1018,7 @@ function renderClaims(result) {
   $('claimList').innerHTML = claims.map((claim) => {
     const gaps = [...(claim.not_established || []), ...(claim.uncertainty_reasons || [])];
     const changes = claim.what_would_change || [];
-    return `<article class="claim-item"><div><strong>${escapeHtml(claim.statement)}</strong><p>${escapeHtml((claim.established || []).join(' · ') || 'No positive dimension established yet.')}</p>${gaps.length ? `<div class="claim-gaps">Boundary: ${escapeHtml(gaps.join(' · '))}</div>` : ''}${changes.length ? `<div class="claim-gaps">What would change this: ${escapeHtml(changes.join(' · '))}</div>` : ''}</div><span class="claim-state ${escapeHtml(claim.state)}">${escapeHtml(humanize(claim.state))}</span></article>`;
+    return `<article class="claim-item"><div><strong>${escapeHtml(claim.statement)}</strong><p>${escapeHtml((claim.established || []).join(' · ') || 'No positive dimension established yet.')}</p>${gaps.length ? `<div class="claim-gaps"><strong>Not established:</strong> ${escapeHtml(gaps.join(' · '))}</div>` : ''}${changes.length ? `<div class="claim-gaps"><strong>Evidence needed:</strong> ${escapeHtml(changes.join(' · '))}</div>` : ''}</div><span class="claim-state ${escapeHtml(claim.state)}">${escapeHtml(humanize(claim.state))}</span></article>`;
   }).join('');
 }
 
@@ -983,12 +1026,12 @@ function renderVerificationIntelligence(result) {
   const challenges = result.odinChallenges || [];
   const questions = result.nextBestVerificationQuestions || [];
   $('verificationPanel').classList.toggle('hidden', !challenges.length && !questions.length);
-  $('odinList').innerHTML = challenges.length ? challenges.map((c) => `<article class="odin-item"><div class="odin-meta"><span class="odin-code">${escapeHtml(c.requirement_id)} · ${escapeHtml(c.code)}</span><span class="odin-severity">${escapeHtml(c.severity)}</span></div><strong>Odin challenge</strong><p>${escapeHtml(c.challenge)}</p></article>`).join('') : '';
+  $('odinList').innerHTML = challenges.length ? challenges.map((c) => `<article class="odin-item"><div class="odin-meta"><span class="odin-code">${escapeHtml(c.requirement_id)} · ${escapeHtml(c.code)}</span><span class="odin-severity">${escapeHtml(c.severity)}</span></div><strong>Why Odin flagged this</strong><p>${escapeHtml(c.challenge)}</p></article>`).join('') : '';
   const saved = readStore(STORAGE.humanReviews, {})[result.auditId] || {};
   $('verificationQuestionList').innerHTML = questions.length ? questions.map((q) => {
     const selected = saved[q.id]?.resolution || '';
     const btn = (value, label) => `<button type="button" class="verification-action ${selected === value ? 'selected' : ''}" data-verification-id="${escapeHtml(q.id)}" data-resolution="${escapeHtml(value)}">${escapeHtml(label)}</button>`;
-    return `<article class="verification-item"><strong>${escapeHtml(q.requirement_id)} · Verification question</strong><p>${escapeHtml(q.question)}</p><div class="verification-actions">${btn('verified_supported','Verified supported')}${btn('verified_not_supported','Not supported')}${btn('still_uncertain','Still uncertain')}</div></article>`;
+    return `<article class="verification-item"><strong>${escapeHtml(q.requirement_id)} · Ask the candidate</strong><p>${escapeHtml(q.question)}</p><div class="verification-actions">${btn('verified_supported','Verified supported')}${btn('verified_not_supported','Not supported')}${btn('still_uncertain','Still uncertain')}</div></article>`;
   }).join('') : '';
 }
 

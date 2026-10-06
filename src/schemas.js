@@ -169,6 +169,19 @@ export const evaluationSchema = {
   additionalProperties: false,
 };
 
+// Candidate interactions return ONLY evidence and matches. The server injects the
+// previously compiled, authoritative JD before any validation or scoring. This
+// prevents large duplicated JD JSON responses and candidate-driven JD rewrites.
+export const warmEvaluationSchema = {
+  type: 'object',
+  properties: {
+    evidence: evaluationSchema.properties.evidence,
+    matches: evaluationSchema.properties.matches,
+  },
+  required: ['evidence','matches'],
+  additionalProperties: false,
+};
+
 // New JD-only AI requests REQUIRE the semantic fields. Warm evaluation/cached
 // legacy objects continue to use the backward-compatible structuredJdSchema.
 export const jdIntelligenceGenerationSchema = structuredClone(structuredJdSchema);

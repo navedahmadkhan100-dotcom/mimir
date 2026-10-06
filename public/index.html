@@ -78,12 +78,12 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=4.6.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;650;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css?v=4.6.4" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="/privacy.js?v=4.6.0"></script>
-  <script src="/document-client.js?v=4.6.0"></script>
+  <script src="/privacy.js?v=4.6.4"></script>
+  <script src="/document-client.js?v=4.6.4"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -91,29 +91,27 @@
   <div class="ambient ambient-c"></div>
 
   <main class="shell">
-    <header class="hero glass-frame">
-      <div class="brand-lockup">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 64 64"><defs><linearGradient id="mimirG" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff416c"/><stop offset=".48" stop-color="#d946ef"/><stop offset="1" stop-color="#4f8cff"/></linearGradient></defs><path d="M12 48V16l20 22 20-22v32" fill="none" stroke="url(#mimirG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="url(#mimirG)" stroke-opacity=".22"/></svg>
-        </div>
-        <div>
-          <div class="eyebrow">EVIDENCE-BASED INTELLIGENT ENGINE</div>
-          <h1>Mimir <span>— Find the Worthy</span></h1>
-          <p class="hero-sub">Evidence-Based AI CV Evaluator for Recruiters · Capability over keywords. Proof over guesswork.</p>
+    <header class="hero glass-frame" aria-label="Mimir product identity">
+      <div class="hero-identity-top">
+        <span class="hero-kicker"><i class="hero-online-dot" aria-hidden="true"></i> EVIDENCE-BASED INTELLIGENT ENGINE</span>
+        <span class="hero-build">MIMIR <strong>v4.6.4</strong></span>
+      </div>
+      <div class="hero-central">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="mimirG" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#09bfff"/><stop offset=".36" stop-color="#5063ff"/><stop offset=".70" stop-color="#cf26ed"/><stop offset="1" stop-color="#ff405f"/></linearGradient></defs><path d="M12 48V16l20 22 20-22v32" fill="none" stroke="url(#mimirG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="url(#mimirG)" stroke-opacity=".28"/></svg></div>
+        <div class="hero-title-block">
+          <h1><span class="hero-name">MIMIR</span> <span class="hero-tagline">— Find the Worthy</span></h1>
+          <span class="hero-underline" aria-hidden="true"></span>
+          <div class="designer-pill" aria-label="Designed by Naved Khan, Senior IT Recruiter">
+            <span class="designer-dot" aria-hidden="true"></span>
+            <span class="designer-by">Designed by <strong>Naved <em>Khan</em></strong></span>
+            <span class="designer-role">Senior IT Recruiter</span>
+          </div>
         </div>
       </div>
-      <div class="hero-side">
-        <span class="live-dot"></span>
-        <span>Evidence Intelligence v4.0</span>
-      </div>
+      <p class="hero-sub"><span class="sr-only">Evidence-Based AI CV Evaluator for Recruiters. </span>Capability over keywords <span aria-hidden="true">✦</span> Proof over guesswork <span aria-hidden="true">✦</span> Explainable candidate intelligence</p>
     </header>
-
-    <section class="creator-strip glass-soft" aria-label="Author contact">
-      <div class="creator-signature">
-        <span class="creator-label">Built by</span>
-        <strong>Naved Khan</strong>
-        <span class="creator-role">Senior IT Recruiter</span>
-      </div>
+    <section class="creator-strip glass-soft" aria-label="Contact and privacy information">
+      <span class="creator-note"><span class="creator-spark" aria-hidden="true">✧</span> Built for evidence-first recruitment</span>
       <div class="creator-links">
         <a href="mailto:navedahmedkhan100@gmail.com">navedahmedkhan100@gmail.com</a>
         <span class="creator-separator">•</span>
@@ -123,7 +121,7 @@
 
     <section class="workspace" id="evaluate">
       <aside class="input-stack">
-        <section class="input-card glass-frame">
+        <section class="input-card jd-card glass-frame">
           <div class="card-topline">
             <div>
               <div class="section-kicker pink">01 · ROLE INTELLIGENCE</div>
@@ -147,12 +145,20 @@
             <button class="remove-file-button hidden" id="removeJdFileBtn" type="button" aria-label="Remove uploaded job description">Remove</button>
           </div>
           <div id="jdDocumentIntel" class="document-intel hidden"></div>
-          <button class="jd-intel-action" id="analyzeJdBtn" type="button">✧ Understand this JD <span>→</span></button>
-          <div id="jdIntelligencePreview" class="jd-intelligence-preview hidden" aria-live="polite"></div>
-          <div class="input-meta"><span id="jdCacheState">No saved structure yet</span><span>Browser-only JD memory</span></div>
+          <div class="jd-command-row">
+            <button class="jd-intel-action" id="analyzeJdBtn" type="button"><span class="jd-action-label"><span class="jd-action-spark" aria-hidden="true">✧</span> Understand this JD</span><span class="jd-action-chevron" aria-hidden="true">↗</span></button>
+            <div class="jd-memory-box" aria-live="polite"><span id="jdCacheState">No saved structure yet</span><span>Browser-only JD memory</span></div>
+          </div>
         </section>
 
-        <section class="input-card glass-frame">
+        <div class="evaluation-bridge">
+          <button id="evaluateBtn" class="evaluate-button" type="button" aria-label="Find the Worthiness — evaluate the CV against this JD" title="Find the Worthiness">
+            <span id="evaluateBtnText">Find the<br>Worthiness</span>
+          </button>
+          <span class="bridge-caption">JD <span aria-hidden="true">↔</span> CV</span>
+        </div>
+
+        <section class="input-card cv-card glass-frame">
           <div class="card-topline">
             <div>
               <div class="section-kicker blue">02 · CANDIDATE EVIDENCE</div>
@@ -161,7 +167,6 @@
             <span class="privacy-pill">Basic PII redaction</span>
           </div>
           <textarea id="cvText" class="input-area cv-area" placeholder="Paste the CV here, or drop a PDF / DOCX / TXT below. Uploaded files are extracted immediately and this box will show the redacted version that Mimir evaluates."></textarea>
-          <div id="cvTransparency" class="transparency-line">Drop a file to preview the redacted text channel. Obvious contact/header PII is masked locally; diagrams and charts use a separate local privacy scrub.</div>
           <div class="file-picker">
             <label class="dropzone" id="cvDropzone" tabindex="0">
               <div class="drop-icon">↥</div>
@@ -174,13 +179,16 @@
             <button class="remove-file-button hidden" id="removeCvFileBtn" type="button" aria-label="Remove uploaded CV">Remove</button>
           </div>
           <div id="cvDocumentIntel" class="document-intel hidden"></div>
+          <div id="cvTransparency" class="transparency-line">Drop a file to preview the redacted text channel. Obvious contact/header PII is masked locally; diagrams and charts use a separate local privacy scrub.</div>
         </section>
 
-        <button id="evaluateBtn" class="evaluate-button" type="button">
-          <span class="button-glow"></span>
-          <span id="evaluateBtnText">Find the Worthiness</span>
-          <span class="button-arrow">→</span>
-        </button>
+        <section id="jdIntelligencePanel" class="jd-insight-panel glass-frame hidden" aria-label="JD Intelligence analysis">
+          <button id="jdIntelligenceToggle" class="jd-insight-toggle" type="button" aria-expanded="false" aria-controls="jdIntelligenceBody">
+            <span class="jd-insight-heading"><span class="jd-insight-emblem" aria-hidden="true">✧</span><span><strong>JD Intelligence · Role understood</strong><small>Explore role intent, adaptive weights and capability priorities</small></span></span>
+            <span class="jd-insight-expand"><span id="jdIntelligenceToggleText">Expand insights</span><svg class="jd-chevron" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button>
+          <div id="jdIntelligenceBody" class="jd-insight-reveal" aria-hidden="true"><div class="jd-insight-inner"><div id="jdIntelligencePreview" class="jd-intelligence-preview hidden" aria-live="polite"></div></div></div>
+        </section>
         <div id="formError" class="error-box hidden"></div>
         <p class="privacy-note">Raw CV files stay in this browser. Basic direct identifiers are redacted locally and re-masked server-side; ambiguous privacy heuristics never block evaluation.</p>
       </aside>
@@ -255,62 +263,62 @@
             </div>
           </section>
 
-          <section id="jdIntelligenceResults" class="architecture-panel glass-frame hidden" aria-label="JD Intelligence and adaptive weights">
-            <div class="matrix-header"><div><div class="section-kicker gradient-text">JD INTELLIGENCE CORE</div><h3>Why these capabilities matter</h3><p>Role-derived priorities and deterministic weighting. These are inferred from the JD, not client-confirmed percentages.</p></div></div>
+          <section id="jdIntelligenceResults" class="architecture-panel glass-frame result-section section-jd-intel hidden" aria-label="JD Intelligence and adaptive weights">
+            <div class="matrix-header"><div><div class="section-kicker gradient-text">01 · ROLE INTELLIGENCE</div><h3>Why these capabilities matter</h3><p>Role-derived priorities and deterministic weighting. These are inferred from the JD, not client-confirmed percentages.</p></div></div>
             <div id="jdIntelligenceResultsBody"></div>
           </section>
-          <section id="signalPanel" class="signal-panel glass-frame hidden">
+          <section id="signalPanel" class="signal-panel glass-frame result-section section-verification hidden">
             <div class="signal-column">
-              <div class="section-kicker pink">VERIFICATION GATES</div>
+              <div class="section-kicker pink">REQUIREMENTS TO CONFIRM</div>
               <div id="gateList" class="signal-list"></div>
             </div>
             <div class="signal-column">
-              <div class="section-kicker blue">INTERVIEW SIGNALS</div>
+              <div class="section-kicker blue">INTERVIEW-ONLY QUALITIES</div>
               <div id="verifyList" class="signal-list"></div>
             </div>
           </section>
 
-          <section id="jdAuditPanel" class="architecture-panel glass-frame hidden">
+          <section id="jdAuditPanel" class="architecture-panel glass-frame result-section section-jd-audit hidden">
             <div class="matrix-header">
               <div>
-                <div class="section-kicker blue">REQUIREMENT AUDIT</div>
-                <h3>JD quality checks</h3>
+                <div class="section-kicker blue">01 · JD QUALITY</div>
+                <h3>Questions about the job description</h3>
                 <p>Mimir flags requirement wording that may be contradictory, compound, unusually restrictive, or otherwise worth confirming with the hiring manager.</p>
               </div>
             </div>
             <div id="jdAuditList" class="odin-list"></div>
           </section>
 
-          <section id="claimPanel" class="architecture-panel glass-frame hidden">
+          <section id="claimPanel" class="architecture-panel glass-frame result-section section-claims hidden">
             <div class="matrix-header">
               <div>
-                <div class="section-kicker gradient-text">CLAIM ENTAILMENT</div>
-                <h3>What the CV actually establishes</h3>
-                <p>Requirement claims are separated from the model's interpretation. Evidence boundaries and Odin can downgrade over-reaching conclusions before scoring.</p>
+                <div class="section-kicker gradient-text">02 · CLAIM CHECK</div>
+                <h3>How strong is each claim?</h3>
+                <p><strong>Supported</strong> means the CV demonstrates a claim. <strong>Partial</strong> means some dimensions are missing. <strong>Unproven</strong> means Mimir could not verify it from this CV.</p>
               </div>
               <div id="claimSummary" class="claim-summary"></div>
             </div>
             <div id="claimList" class="claim-list"></div>
           </section>
 
-          <section id="verificationPanel" class="architecture-panel glass-frame hidden">
+          <section id="verificationPanel" class="architecture-panel glass-frame result-section section-odin hidden">
             <div class="matrix-header">
               <div>
-                <div class="section-kicker pink">ODIN + VERIFICATION</div>
-                <h3>Challenge uncertainty instead of hiding it</h3>
-                <p>Odin attacks unsupported inference. Mimir then proposes the smallest recruiter question that can resolve the remaining uncertainty.</p>
+                <div class="section-kicker pink">04 · ODIN’S SECOND OPINION</div>
+                <h3>What Odin challenges</h3>
+                <p><strong>Odin is the independent consistency check.</strong> The amber/red findings explain what may be overstated or unproven; blue interview prompts tell you exactly what to confirm.</p>
               </div>
             </div>
             <div id="odinList" class="odin-list"></div>
             <div id="verificationQuestionList" class="verification-question-list"></div>
           </section>
 
-          <section class="evidence-panel glass-frame">
+          <section class="evidence-panel glass-frame result-section section-proof">
             <div class="matrix-header">
               <div>
-                <div class="section-kicker gradient-text">PROOF MATRIX</div>
-                <h3>Evidence behind the result</h3>
-                <p>Every requirement is traced to a verified CV quote, an approved visual artefact, a defensible inference path, or clearly marked for verification.</p>
+                <div class="section-kicker gradient-text">03 · EVIDENCE MATRIX</div>
+                <h3>What the CV actually proves</h3>
+                <p>Read each requirement alongside the candidate’s exact CV evidence and Mimir’s interpretation. Missing proof means <em>not demonstrated in this CV</em>—not that the candidate lacks the skill.</p>
               </div>
               <div class="matrix-legend">
                 <span><i class="legend-dot documented"></i>Proof</span>
@@ -358,7 +366,7 @@
     </nav>
     <footer class="footer-line">
       <span>Mimir — Find the Worthy</span>
-      <span>Evidence-based candidate intelligence · v4.6.0</span>
+      <span>Evidence-based candidate intelligence · v4.6.4</span>
     </footer>
   </main>
 
@@ -373,7 +381,7 @@
 
   <div id="toast" class="toast hidden" role="status"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="/config.js?v=4.6.0"></script>
-  <script type="module" src="/app.js?v=4.6.0"></script>
+  <script src="/config.js?v=4.6.4"></script>
+  <script type="module" src="/app.js?v=4.6.4"></script>
 </body>
 </html>

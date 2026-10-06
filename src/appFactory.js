@@ -240,7 +240,7 @@ export function createMimirApp(options = {}) {
       console.error('[Mimir JD intelligence error]',error?.stack || error?.message || error);
       const message=error?.message || 'JD Intelligence analysis failed.';
       const clientError=/required|invalid|unsupported|schema|document|visual|too large|exceeds|too many|payload/i.test(message);
-      return res.status(clientError?400:500).json({error:clientError?message:'JD Intelligence analysis failed.'});
+      return res.status(error?.code==='AI_TIMEOUT'?504:clientError?400:500).json({error:error?.code==='AI_TIMEOUT'?message:clientError?message:'JD Intelligence analysis failed.',code:error?.code||undefined});
     }
   });
 
@@ -290,7 +290,7 @@ export function createMimirApp(options = {}) {
 
       const prompt = warmPrompt(structuredJd, cvMasked.maskedText);
       const llm = await gateway.evaluate(prompt, cvVisualAssets);
-      const sanitized = validateAndSanitizeModelOutput(llm.json, cvMasked.maskedText, structuredJd, cvVisualAssets);
+      const sanitized = validateAndSanitizeModelOutput({ ...llm.json, structured_jd:structuredJd }, cvMasked.maskedText, structuredJd, cvVisualAssets);
       const jdAudit = auditStructuredJd(structuredJd);
       const jdIntelligence = jdIntelligenceSummary(structuredJd,effectiveAssessmentMode);
 
@@ -418,7 +418,7 @@ export function createMimirApp(options = {}) {
       console.error('[Mimir evaluation error]', error?.stack || error?.message || error);
       const message = error?.message || 'Evaluation failed.';
       const clientError = /required|invalid|unsupported|unable to extract|schema|document|visual|too large|exceeds|too many|safety|payload/i.test(message);
-      return res.status(clientError ? 400 : 500).json({ error: message });
+      return res.status(error?.code === 'AI_TIMEOUT' ? 504 : clientError ? 400 : 500).json({ error: message, code: error?.code || undefined });
     }
   });
 

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { evaluationSchema, jdIntelligenceGenerationSchema } from './schemas.js';
+import { warmEvaluationSchema, jdIntelligenceGenerationSchema } from './schemas.js';
 import { SYSTEM_INSTRUCTION } from './prompt.js';
 
 export const MODEL_ID = 'gemini-3.5-flash-lite';
@@ -71,7 +71,7 @@ export class GeminiExtractor {
   }
 
   async evaluate(prompt, visualAssets = []) {
-    const interaction = await this.runInteraction(prompt, visualAssets, evaluationSchema);
+    const interaction = await this.runInteraction(prompt, visualAssets, warmEvaluationSchema);
     return {
       json: parseJsonOutput(interaction, 'evaluation'),
       usage: interaction.usage || null,

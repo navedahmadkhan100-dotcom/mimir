@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: mimir-find-the-worthy
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_TIMEOUT_MS
+        value: 105000
+      - key: NODE_VERSION
+        value: 22.13.0
+      - key: SCORING_REFERENCE_YEAR
+        value: 2026
+      - key: MIMIR_DEPLOYMENT
+        value: render
+      - key: ALLOWED_ORIGINS
+        value: https://mimir.co.in,https://www.mimir.co.in
+      - key: GEMINI_API_KEY
+        sync: false

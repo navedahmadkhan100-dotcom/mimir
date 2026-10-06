@@ -1,0 +1,28 @@
+{
+  "name": "mimir-find-the-worthy",
+  "version": "4.6.4",
+  "private": true,
+  "type": "module",
+  "description": "Mimir — Find the Worthy: evidence-based multimodal CV evaluation on Render with fast DOCX visuals, practical PII redaction, JD-first semantic intelligence, deterministic adaptive scoring, and an SEO growth foundation for recruiter discovery.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "check": "node --check server.js && node --check src/appFactory.js && node --check src/security.js && node --check src/gemini.js && node --check src/postprocess.js && node --check src/requirementRules.js && node --check src/ontology.js && node --check src/scoring.js && node --check src/reports.js && node --check src/odin.js && node --check src/claimModel.js && node --check src/evidenceSemantics.js && node --check src/entailment.js && node --check src/policyEngine.js && node --check src/evidenceIntelligence.js && node --check src/governance.js && node --check src/aiGateway.js && node --check src/evidenceGraph.js && node --check src/jdAudit.js && node --check src/jdIntelligence.js && node --check public/app.js && node --check public/privacy.js && node --check public/document-client.js && node --check public/config.js",
+    "benchmark": "node scripts/benchmark-core.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@google/genai": "2.24.0",
+    "ajv": "8.20.0",
+    "docx": "9.7.1",
+    "dotenv": "16.6.1",
+    "express": "5.2.1",
+    "express-rate-limit": "8.7.0",
+    "helmet": "8.1.0",
+    "pdfkit": "0.20.2",
+    "sharp": "0.35.5"
+  }
+}

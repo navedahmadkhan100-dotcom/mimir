@@ -1,6 +1,16 @@
 import { GeminiExtractor, MODEL_ID as GEMINI_MODEL_ID } from './gemini.js';
 
-export const AI_GATEWAY_VERSION = '4.4.0-provider-gateway-timeout';
+export const AI_GATEWAY_VERSION = '4.6.1-phase-aware-timeout';
+
+export class AITimeoutError extends Error {
+  constructor(stage, durationMs) {
+    super(`Gemini ${stage} exceeded the ${Math.round(durationMs / 1000)}-second request deadline. If this is a new JD, run “Understand this JD” first, then evaluate the CV. You can retry once after checking Render logs.`);
+    this.name = 'AITimeoutError';
+    this.code = 'AI_TIMEOUT';
+    this.stage = stage;
+    this.timeoutMs = durationMs;
+  }
+}
 
 export class AIGateway {
   constructor(env = process.env) {
@@ -14,29 +24,36 @@ export class AIGateway {
 
   get modelId() { return this.provider === 'gemini' ? GEMINI_MODEL_ID : 'unknown'; }
 
-  async withTimeout(operation) {
-    const timeoutMs = Math.max(10_000, Math.min(120_000, Number(this.env.AI_TIMEOUT_MS || 75_000)));
+  async withTimeout(operation, stage = 'evaluation') {
+    const raw = Number(this.env.AI_TIMEOUT_MS || 105_000);
+    const timeoutMs = Number.isFinite(raw) ? Math.max(10_000, Math.min(180_000, raw)) : 105_000;
+    const startedAt = Date.now();
     let timer;
     try {
-      return await Promise.race([
-        operation(),
+      const result = await Promise.race([
+        Promise.resolve().then(operation),
         new Promise((_, reject) => {
-          timer = setTimeout(() => reject(new Error('AI evaluation timed out. Please retry.')), timeoutMs);
+          timer = setTimeout(() => reject(new AITimeoutError(stage, timeoutMs)), timeoutMs);
           timer.unref?.();
         }),
       ]);
+      console.info(`[Mimir AI] ${stage} completed in ${Date.now() - startedAt}ms`);
+      return result;
+    } catch (error) {
+      console.warn(`[Mimir AI] ${stage} failed after ${Date.now() - startedAt}ms; type=${error?.code || error?.name || 'Error'}`);
+      throw error;
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
 
   async structureJd(prompt, visualAssets = []) {
-    const result = await this.withTimeout(() => this.adapter.structureJd(prompt, visualAssets));
+    const result = await this.withTimeout(() => this.adapter.structureJd(prompt, visualAssets), 'JD analysis');
     return { ...result, provider:this.provider, gatewayVersion:AI_GATEWAY_VERSION };
   }
 
   async evaluate(prompt, visualAssets = []) {
-    const result = await this.withTimeout(() => this.adapter.evaluate(prompt, visualAssets));
+    const result = await this.withTimeout(() => this.adapter.evaluate(prompt, visualAssets), 'CV evaluation');
     return { ...result, provider:this.provider, gatewayVersion:AI_GATEWAY_VERSION };
   }
 }
