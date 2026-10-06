@@ -880,3 +880,35 @@ button,textarea,input{font-family:inherit}
  .designer-by{font-size:9px;}.designer-role{font-size:8px;}
  .hero-right .hero-sub{grid-template-columns:1fr;gap:4px;}
 }
+
+
+/* MIMIR v1.0 | Responsive footer placement and in-button loader. */
+/* Shell takes the whole viewport on tall desktop displays, but can grow when
+   results, an open JD Intelligence panel or browser zoom need extra space. */
+.shell{display:flex!important;flex-direction:column!important;min-height:100dvh!important;height:auto!important;}
+body:not(.has-results):not(.is-evaluating) .shell{height:auto!important;min-height:100dvh!important;display:flex!important;flex-direction:column!important;}
+body{overflow-y:auto!important;height:auto!important;min-height:100vh!important;}
+body:not(.has-results):not(.is-evaluating){height:auto!important;min-height:100vh!important;overflow-y:auto!important;}
+.shell > .workspace{flex:0 0 auto;min-width:0;}
+/* Readable redaction statement and backlinks belong to the bottom group.
+   margin-top:auto expands naturally at 1440p/4K, and compresses to zero on laptops. */
+.shell > .privacy-note{flex:0 0 auto;margin: auto 8px 0!important;padding-top:clamp(9px,1vh,16px);line-height:1.55;text-align:center;}
+.shell > .seo-link-row{flex:0 0 auto;margin-top:8px!important;}
+.shell > .footer-line{flex:0 0 auto;margin-top:0!important;padding-top:7px!important;}
+/* Spinner is a child of the evaluation control: it never sits outside the ring.
+   The button itself retains its original two-beat loading animation. */
+.evaluate-button .evaluate-inner-spinner{
+  position:absolute;inset:9px;z-index:1;display:block;border-radius:50%;
+  border:3px solid rgba(115,151,255,.12);
+  border-top-color:#67e8ff;border-right-color:#728dff;
+  border-bottom-color:#ef55dc;border-left-color:#ff6db5;
+  box-shadow:inset 0 0 9px rgba(114,130,244,.12),0 0 10px rgba(105,187,255,.12);
+  opacity:0;pointer-events:none;transform:translateZ(0);
+}
+.evaluate-button #evaluateBtnText{position:relative;z-index:2!important;}
+.evaluate-button.is-loading .evaluate-inner-spinner{opacity:1;animation:mimirInnerOrbit 1.12s linear infinite!important;}
+/* Disable older external ripple and competing pseudo-element animation. */
+.evaluate-button.is-loading::after{display:none!important;animation:none!important;opacity:0!important;}
+@media(prefers-reduced-motion:reduce){
+  .evaluate-button.is-loading .evaluate-inner-spinner{animation:none!important;opacity:1;}
+}
