@@ -79,7 +79,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;650;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=1.0" />
+  <link rel="stylesheet" href="/styles.css?v=1.0.1" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.13.0/mammoth.browser.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="/privacy.js?v=1.0"></script>
@@ -92,23 +92,30 @@
 
   <main class="shell">
     <header class="hero glass-frame" aria-label="Mimir product identity">
-      <div class="hero-identity-top">
-        <span class="hero-kicker"><i class="hero-online-dot" aria-hidden="true"></i> EVIDENCE-BASED INTELLIGENT ENGINE</span>
-        <span class="hero-build">MIMIR <strong>v1.0</strong></span>
-      </div>
-      <div class="hero-central">
-        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><defs><linearGradient id="mimirG" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#09bfff"/><stop offset=".36" stop-color="#5063ff"/><stop offset=".70" stop-color="#cf26ed"/><stop offset="1" stop-color="#ff405f"/></linearGradient></defs><path d="M12 48V16l20 22 20-22v32" fill="none" stroke="url(#mimirG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="url(#mimirG)" stroke-opacity=".28"/></svg></div>
-        <div class="hero-title-block">
-          <h1><span class="hero-name">MIMIR</span> <span class="hero-tagline">— Find the Worthy</span></h1>
-          <span class="hero-underline" aria-hidden="true"></span>
-          <div class="designer-pill" aria-label="Designed by Naved Khan, Senior IT Recruiter">
-            <span class="designer-dot" aria-hidden="true"></span>
-            <span class="designer-by">Designed by <strong>Naved <em>Khan</em></strong></span>
-            <span class="designer-role">Senior IT Recruiter</span>
+      <div class="hero-three-way">
+        <div class="hero-left">
+          <div class="hero-title-block">
+            <span class="sr-only">Evidence-Based AI CV Evaluator for Recruiters.</span>
+            <h1><span class="hero-name">MIMIR</span> <span class="hero-tagline">— Find the Worthy</span></h1>
+            <span class="hero-underline" aria-hidden="true"></span>
+            <div class="designer-pill" aria-label="Designed by Naved Khan, Senior IT Recruiter">
+              <span class="designer-dot" aria-hidden="true"></span>
+              <span class="designer-by">Designed by <strong>Naved <em>Khan</em></strong></span>
+              <span class="designer-role">Senior IT Recruiter</span>
+            </div>
           </div>
         </div>
+        <div class="hero-center">
+          <div class="brand-mark" aria-label="Mimir icon" role="img"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="mimirG" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#09bfff"/><stop offset=".36" stop-color="#5063ff"/><stop offset=".70" stop-color="#cf26ed"/><stop offset="1" stop-color="#ff405f"/></linearGradient></defs><path d="M12 48V16l20 22 20-22v32" fill="none" stroke="url(#mimirG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="url(#mimirG)" stroke-opacity=".28"/></svg></div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-right-top">
+            <span class="hero-kicker"><i class="hero-online-dot" aria-hidden="true"></i> EVIDENCE-BASED INTELLIGENT ENGINE</span>
+            <span class="hero-build">MIMIR <strong>v1.0</strong></span>
+          </div>
+          <p class="hero-sub"><span>Capability over keywords</span><span>Proof over guesswork</span><span>Explainable candidate intelligence</span></p>
+        </div>
       </div>
-      <p class="hero-sub"><span class="sr-only">Evidence-Based AI CV Evaluator for Recruiters. </span>Capability over keywords <span aria-hidden="true">✦</span> Proof over guesswork <span aria-hidden="true">✦</span> Explainable candidate intelligence</p>
     </header>
     <section class="creator-strip glass-soft" aria-label="Contact and privacy information">
       <span class="creator-note"><span class="creator-spark" aria-hidden="true">✧</span> Built for evidence-first recruitment</span>
@@ -178,7 +185,10 @@
             </label>
             <button class="remove-file-button hidden" id="removeCvFileBtn" type="button" aria-label="Remove uploaded CV">Remove</button>
           </div>
-          <div id="cvDocumentIntel" class="document-intel hidden"></div>
+          <div id="cvDocumentIntel" class="document-intel cv-document-status" role="status" aria-live="polite">
+            <strong>Text + visual document</strong>
+            <span>No text or visuals detected yet. Parse the CV first.</span>
+          </div>
           <div id="cvTransparency" class="transparency-line hidden" aria-hidden="true"></div>
         </section>
 
@@ -365,6 +375,6 @@
   <div id="toast" class="toast hidden" role="status"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="/config.js?v=1.0"></script>
-  <script type="module" src="/app.js?v=1.0"></script>
+  <script type="module" src="/app.js?v=1.0.1"></script>
 </body>
 </html>

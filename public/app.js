@@ -282,8 +282,13 @@ function renderDocumentIntel(kind, intel = null) {
   const element = $(kind === 'cv' ? 'cvDocumentIntel' : 'jdDocumentIntel');
   if (!element) return;
   if (!intel) {
-    element.classList.add('hidden');
-    element.innerHTML = '';
+    if (kind === 'cv') {
+      element.innerHTML = '<strong>Text + visual document</strong><span>No text or visuals detected yet. Parse the CV first.</span>';
+      element.classList.remove('hidden');
+    } else {
+      element.classList.add('hidden');
+      element.innerHTML = '';
+    }
     return;
   }
   const bits = [];
@@ -754,7 +759,6 @@ async function evaluateCandidate() {
     // finishing, wait briefly at evaluation time instead of freezing the upload UI.
     // A slow/failed visual never blocks the candidate evaluation.
     if (state.cvVisualStatus === 'processing' || (!cachedStructure && state.jdVisualStatus === 'processing')) {
-      $('loadingCopy').textContent = 'Finishing background diagram/chart preparation…';
       const visualWait = await waitForVisualPreparation({ includeJd: !cachedStructure, maxWaitMs: 6000 });
       if (visualWait.timedOut) {
         const ready = Number(state.cvVisualAssets?.length || 0);
@@ -776,13 +780,6 @@ async function evaluateCandidate() {
     if (cachedStructure) {
       payload.structuredJd = cachedStructure;
       payload.jdHash = jdHash;
-      $('loadingCopy').textContent = state.cvFile
-        ? 'Running a fresh candidate evaluation with the saved JD structure and redacted text + visual evidence.'
-        : 'Running a fresh candidate evaluation with the saved JD structure.';
-    } else {
-      $('loadingCopy').textContent = (state.jdFile || state.cvFile)
-        ? 'Reading text, diagrams and charts; privacy-scrubbing candidate visuals; then tracing fresh evidence.'
-        : 'Structuring the JD once, then running a fresh evidence evaluation.';
     }
 
     const fitted = fitEvaluationPayload(payload);

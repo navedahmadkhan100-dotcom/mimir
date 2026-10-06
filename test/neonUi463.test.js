@@ -12,7 +12,7 @@ test('loading keeps the cancelable evaluation button and adds heartbeat motion',
  assert.match(app,/button\.classList\.toggle\('is-loading', loading\)/);
  assert.match(app,/button\.setAttribute\('aria-label', loading \? 'Cancel evaluation'/);
  assert.match(styles,/@keyframes mimirHeartbeat/);assert.match(styles,/prefers-reduced-motion:reduce/);
- assert.match(html,/class="loader-rune"/);
+ assert.doesNotMatch(html,/class="loader-rune"/); // loading remains in the circular action
 });
 test('evidence report separates requirement, quote and interpretation',()=>{
  assert.match(app,/evidence-row-top/);assert.match(app,/What the role requires/);
