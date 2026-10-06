@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090713" />
+  <title>Mimir — Find the Worthy</title>
+  <meta name="description" content="Mimir — evidence-based CV evaluation with quote-backed proof and deterministic scoring." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="ambient ambient-c"></div>
+
+  <main class="shell">
+    <header class="hero glass-frame">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><defs><linearGradient id="mimirG" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff416c"/><stop offset=".48" stop-color="#d946ef"/><stop offset="1" stop-color="#4f8cff"/></linearGradient></defs><path d="M12 48V16l20 22 20-22v32" fill="none" stroke="url(#mimirG)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="url(#mimirG)" stroke-opacity=".22"/></svg>
+        </div>
+        <div>
+          <div class="eyebrow">EVIDENCE-BASED INTELLIGENT ENGINE</div>
+          <h1>Mimir <span>— Find the Worthy</span></h1>
+          <p class="hero-sub">Capability over keywords. Proof over guesswork.</p>
+        </div>
+      </div>
+      <div class="hero-side">
+        <span class="live-dot"></span>
+        <span>Evidence Graph v2</span>
+      </div>
+    </header>
+
+    <section class="creator-strip glass-soft" aria-label="Author contact">
+      <div class="creator-signature">
+        <span class="creator-label">Built by</span>
+        <strong>Naved Khan</strong>
+        <span class="creator-role">Senior IT Recruiter</span>
+      </div>
+      <div class="creator-links">
+        <a href="mailto:navedahmedkhan100@gmail.com">navedahmedkhan100@gmail.com</a>
+        <span class="creator-separator">•</span>
+        <a href="tel:+918384862395">+91 8384862395</a>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <aside class="input-stack">
+        <section class="input-card glass-frame">
+          <div class="card-topline">
+            <div>
+              <div class="section-kicker pink">01 · ROLE INTELLIGENCE</div>
+              <h2>Job description</h2>
+            </div>
+            <div class="mini-actions">
+              <button class="icon-button" id="savedJdsBtn" type="button" title="Saved JDs">Saved</button>
+              <button class="icon-button accent" id="saveJdBtn" type="button" title="Save JD locally">Save JD</button>
+            </div>
+          </div>
+          <textarea id="jdText" class="input-area" placeholder="Paste the JD here, or drop a PDF / DOCX / TXT below..."></textarea>
+          <label class="dropzone" id="jdDropzone" tabindex="0">
+            <div class="drop-icon">↥</div>
+            <div class="drop-copy">
+              <strong id="jdFileName">Drop JD or browse</strong>
+              <span>PDF, DOCX or TXT · extracted locally through your Mimir server</span>
+            </div>
+            <input id="jdFile" type="file" accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
+          </label>
+          <div class="input-meta"><span id="jdCacheState">No saved structure yet</span><span>Browser-only JD memory</span></div>
+        </section>
+
+        <section class="input-card glass-frame">
+          <div class="card-topline">
+            <div>
+              <div class="section-kicker blue">02 · CANDIDATE EVIDENCE</div>
+              <h2>CV / Résumé</h2>
+            </div>
+            <span class="privacy-pill">PII masked</span>
+          </div>
+          <textarea id="cvText" class="input-area cv-area" placeholder="Paste the CV here, or drop a PDF / DOCX / TXT below. Uploaded files are extracted immediately and this box will show the redacted version that Mimir evaluates."></textarea>
+          <div id="cvTransparency" class="transparency-line">Drop a file to preview exactly what Mimir will evaluate after redaction.</div>
+          <label class="dropzone" id="cvDropzone" tabindex="0">
+            <div class="drop-icon">↥</div>
+            <div class="drop-copy">
+              <strong id="cvFileName">Drop CV or browse</strong>
+              <span>PDF, DOCX or TXT · max 8 MB</span>
+            </div>
+            <input id="cvFile" type="file" accept=".pdf,.docx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden />
+          </label>
+        </section>
+
+        <button id="evaluateBtn" class="evaluate-button" type="button">
+          <span class="button-glow"></span>
+          <span id="evaluateBtnText">Find the Worthiness</span>
+          <span class="button-arrow">→</span>
+        </button>
+        <div id="formError" class="error-box hidden"></div>
+        <p class="privacy-note">Raw CV text is not written to a server database. Saved JDs and local evaluation cache stay in this browser.</p>
+      </aside>
+
+      <section class="results-column">
+        <section id="emptyState" class="empty-state glass-frame">
+          <div class="orbital-mark">
+            <div class="orbital-core">M</div>
+          </div>
+          <div class="section-kicker gradient-text">MIMIR EVIDENCE GRAPH</div>
+          <h2>Read the career, not the keyword list.</h2>
+          <p>Mimir separates hard facts, demonstrated capability, transferable evidence and interview-only signals. Every positive claim must trace back to the masked CV.</p>
+          <div class="principle-grid">
+            <article><span>01</span><strong>Evidence states</strong><p>Documented, listed, inferred, unsettled or missing.</p></article>
+            <article><span>02</span><strong>Capability graph</strong><p>Understands relationships such as AKS → Azure and C# → .NET.</p></article>
+            <article><span>03</span><strong>Fair absence</strong><p>Generic communication claims are not scored as failures when absent.</p></article>
+          </div>
+        </section>
+
+        <section id="loadingState" class="loading-state glass-frame hidden" aria-live="polite">
+          <div class="loader-rune"><span></span></div>
+          <div>
+            <div class="section-kicker gradient-text">MIMIR IS READING THE EVIDENCE</div>
+            <h2>Mapping career signals...</h2>
+            <p id="loadingCopy">Masking identity, extracting capability and tracing proof back to the CV.</p>
+          </div>
+        </section>
+
+        <div id="results" class="results hidden">
+          <section class="score-panel glass-frame">
+            <div class="score-hero">
+              <div class="score-ring" id="scoreRing" style="--score-pct:0%">
+                <div class="score-core">
+                  <strong id="scoreValue">0</strong>
+                  <span>/100</span>
+                </div>
+              </div>
+              <div class="score-copy">
+                <div class="score-badges">
+                  <span id="verdict" class="verdict-badge">—</span>
+                  <span id="dealbreakerBadge" class="warning-badge hidden">Gate attention</span>
+                </div>
+                <h2 id="roleTitle">Role title</h2>
+                <p id="auditId" class="audit-id">MIMIR-—</p>
+              </div>
+            </div>
+            <div class="export-actions">
+              <button class="export-button pdf" id="downloadPdfBtn" type="button">PDF</button>
+              <button class="export-button docx" id="downloadDocxBtn" type="button">DOCX</button>
+              <button class="export-button json" id="downloadAuditBtn" type="button">JSON</button>
+            </div>
+            <div class="metric-grid">
+              <article class="metric-card">
+                <div class="metric-head"><span>Experience</span><strong id="experienceScore">0%</strong></div>
+                <div class="metric-track"><div id="experienceBar" class="metric-fill exp"></div></div>
+                <p>Role history and responsibility evidence</p>
+              </article>
+              <article class="metric-card">
+                <div class="metric-head"><span>Skills</span><strong id="skillsScore">0%</strong></div>
+                <div class="metric-track"><div id="skillsBar" class="metric-fill skills"></div></div>
+                <p>Direct, equivalent and connected capability</p>
+              </article>
+              <article class="metric-card">
+                <div class="metric-head"><span>Depth</span><strong id="depthScore">0%</strong></div>
+                <div class="metric-track"><div id="depthBar" class="metric-fill depth"></div></div>
+                <p>Led, owned and hands-on strength</p>
+              </article>
+            </div>
+          </section>
+
+          <section id="signalPanel" class="signal-panel glass-frame hidden">
+            <div class="signal-column">
+              <div class="section-kicker pink">VERIFICATION GATES</div>
+              <div id="gateList" class="signal-list"></div>
+            </div>
+            <div class="signal-column">
+              <div class="section-kicker blue">INTERVIEW SIGNALS</div>
+              <div id="verifyList" class="signal-list"></div>
+            </div>
+          </section>
+
+          <section class="evidence-panel glass-frame">
+            <div class="matrix-header">
+              <div>
+                <div class="section-kicker gradient-text">PROOF MATRIX</div>
+                <h3>Evidence behind the result</h3>
+                <p>Every requirement is traced to a verified CV quote, a defensible inference path, or clearly marked for verification.</p>
+              </div>
+              <div class="matrix-legend">
+                <span><i class="legend-dot documented"></i>Proof</span>
+                <span><i class="legend-dot inferred"></i>Inferred</span>
+                <span><i class="legend-dot verify"></i>Verify</span>
+                <span><i class="legend-dot missing"></i>Missing</span>
+              </div>
+            </div>
+            <div id="evidenceMatrix" class="evidence-matrix"></div>
+          </section>
+
+          <section class="audit-grid">
+            <article class="glass-frame compact-card">
+              <div class="section-kicker pink">PRIVACY GATE</div>
+              <h3>Identity masking</h3>
+              <div id="maskingReport" class="chip-grid"></div>
+            </article>
+            <article class="glass-frame compact-card">
+              <div class="section-kicker blue">AUDIT TRACE</div>
+              <h3>Evaluation metadata</h3>
+              <div id="auditMeta" class="audit-lines"></div>
+            </article>
+          </section>
+        </div>
+      </section>
+    </section>
+
+    <footer class="footer-line">
+      <span>Mimir — Find the Worthy</span>
+      <span>Evidence-based candidate intelligence · v2.1</span>
+    </footer>
+  </main>
+
+  <div id="savedJdsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="savedJdsTitle">
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card glass-frame">
+      <div class="modal-head"><div><div class="section-kicker gradient-text">LOCAL JD VAULT</div><h2 id="savedJdsTitle">Saved job descriptions</h2></div><button id="closeSavedJds" class="close-button" type="button">×</button></div>
+      <p class="modal-note">Stored only in this browser. No database is required.</p>
+      <div id="savedJdsList" class="saved-jd-list"></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,0 @@
-
-> mimir-find-the-worthy@4.3.0 check
-> node --check server.js && node --check src/appFactory.js && node --check src/gemini.js && node --check src/postprocess.js && node --check src/requirementRules.js && node --check src/ontology.js && node --check src/scoring.js && node --check src/reports.js && node --check src/odin.js && node --check src/claimModel.js && node --check src/evidenceSemantics.js && node --check src/entailment.js && node --check src/policyEngine.js && node --check src/evidenceIntelligence.js && node --check src/governance.js && node --check src/aiGateway.js && node --check src/evidenceGraph.js && node --check src/jdAudit.js && node --check public/app.js && node --check public/privacy.js && node --check public/document-client.js && node --check public/config.js
-
-Secret scan: no obvious embedded Gemini key found.
