@@ -172,18 +172,18 @@ function setLoading(loading) {
   button.setAttribute('aria-busy', String(loading));
   button.setAttribute('aria-label', loading ? 'Cancel evaluation' : 'Find the Worthiness — evaluate the CV against this JD');
   button.title = loading ? 'Cancel evaluation' : 'Find the Worthiness';
-  $('evaluateBtnText').innerHTML = loading ? 'Cancel' : 'Find the<br>Worthiness';
+  $('evaluateBtnText').innerHTML = loading ? 'Cancel' : 'Find<br>the<br>Worthiness';
   if (arrow) arrow.textContent = loading ? '×' : '↗';
   document.body.classList.toggle('is-evaluating', loading);
 
   if (loading) {
     $('emptyState').classList.add('hidden');
     $('results').classList.add('hidden');
-    $('loadingState').classList.remove('hidden');
+    if ($('loadingState')) $('loadingState').classList.add('hidden');
     return;
   }
 
-  $('loadingState').classList.add('hidden');
+  if ($('loadingState')) $('loadingState').classList.add('hidden');
   if (state.result) {
     $('results').classList.remove('hidden');
     $('emptyState').classList.add('hidden');
@@ -199,7 +199,7 @@ function invalidateResult() {
   if (state.isEvaluating) state.abortController?.abort();
   state.result = null;
   $('results').classList.add('hidden');
-  $('loadingState').classList.add('hidden');
+  if ($('loadingState')) $('loadingState').classList.add('hidden');
   $('emptyState').classList.remove('hidden');
   document.body.classList.remove('has-results', 'is-evaluating');
 }
@@ -1099,7 +1099,7 @@ function renderAudit(result) {
 function renderResult(result) {
   document.body.classList.add('has-results');
   $('emptyState').classList.add('hidden');
-  $('loadingState').classList.add('hidden');
+  if ($('loadingState')) $('loadingState').classList.add('hidden');
   $('results').classList.remove('hidden');
 
   const score = Number(result.finalScore || 0);

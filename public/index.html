@@ -153,7 +153,7 @@
 
         <div class="evaluation-bridge">
           <button id="evaluateBtn" class="evaluate-button" type="button" aria-label="Find the Worthiness — evaluate the CV against this JD" title="Find the Worthiness">
-            <span id="evaluateBtnText">Find the<br>Worthiness</span>
+            <span id="evaluateBtnText">Find<br>the<br>Worthiness</span>
           </button>
           <span class="bridge-caption">JD <span aria-hidden="true">↔</span> CV</span>
         </div>
@@ -164,7 +164,7 @@
               <div class="section-kicker blue">02 · CANDIDATE EVIDENCE</div>
               <h2>CV / Résumé</h2>
             </div>
-            <span class="privacy-pill">Basic PII redaction</span>
+            <span class="privacy-pill">PII Redaction</span>
           </div>
           <textarea id="cvText" class="input-area cv-area" placeholder="Paste the CV here, or drop a PDF / DOCX / TXT below. Uploaded files are extracted immediately and this box will show the redacted version that Mimir evaluates."></textarea>
           <div class="file-picker">
@@ -179,7 +179,7 @@
             <button class="remove-file-button hidden" id="removeCvFileBtn" type="button" aria-label="Remove uploaded CV">Remove</button>
           </div>
           <div id="cvDocumentIntel" class="document-intel hidden"></div>
-          <div id="cvTransparency" class="transparency-line">Drop a file to preview the redacted text channel. Obvious contact/header PII is masked locally; diagrams and charts use a separate local privacy scrub.</div>
+          <div id="cvTransparency" class="transparency-line hidden" aria-hidden="true"></div>
         </section>
 
         <section id="jdIntelligencePanel" class="jd-insight-panel glass-frame hidden" aria-label="JD Intelligence analysis">
@@ -208,14 +208,7 @@
           </div>
         </section>
 
-        <section id="loadingState" class="loading-state glass-frame hidden" aria-live="polite">
-          <div class="loader-rune"><span></span></div>
-          <div>
-            <div class="section-kicker gradient-text">MIMIR IS READING THE EVIDENCE</div>
-            <h2>Mapping career signals...</h2>
-            <p id="loadingCopy">Masking identity, extracting capability and tracing proof back to the CV.</p>
-          </div>
-        </section>
+        <div id="loadingState" class="loading-state hidden" aria-hidden="true"></div>
 
         <div id="results" class="results hidden">
           <section class="export-brand" aria-hidden="true">
@@ -330,27 +323,17 @@
             <div id="evidenceMatrix" class="evidence-matrix"></div>
           </section>
 
-          <section class="audit-grid">
-            <article class="glass-frame compact-card">
-              <div class="section-kicker pink">PRIVACY GATE</div>
-              <h3>Identity masking</h3>
-              <div id="maskingReport" class="chip-grid"></div>
-            </article>
-            <article class="glass-frame compact-card">
-              <div class="section-kicker blue">AUDIT TRACE</div>
-              <h3>Evaluation metadata</h3>
-              <div id="auditMeta" class="audit-lines"></div>
-            </article>
-            <article class="glass-frame compact-card">
+          <section class="audit-grid audit-grid-governance-only">
+            <article class="glass-frame compact-card governance-card">
               <div class="section-kicker gradient-text">GOVERNANCE</div>
               <h3>Human-controlled decision</h3>
               <div id="governanceMeta" class="audit-lines"></div>
             </article>
-            <article class="glass-frame compact-card">
-              <div class="section-kicker gradient-text">LIVING EVIDENCE INTELLIGENCE</div>
-              <h3>Anonymous local learning</h3>
+            <div class="hidden" aria-hidden="true">
+              <div id="maskingReport" class="chip-grid"></div>
+              <div id="auditMeta" class="audit-lines"></div>
               <div id="intelligenceMeta" class="audit-lines"></div>
-            </article>
+            </div>
           </section>
         </div>
       </section>
