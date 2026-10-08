@@ -2,6 +2,7 @@ import Ajv from 'ajv';
 import { evaluationSchema, structuredJdSchema } from './schemas.js';
 import { quoteExistsInMaskedCv } from './mask.js';
 import { reconcileRelation, conceptSurfaceForms } from './ontology.js';
+import { recoverTextFirstEvidence } from './textEvidenceRecovery.js';
 import { normalizeStructuredJd } from './requirementRules.js';
 import { normalizeJdIntelligence } from './jdIntelligence.js';
 import { normalizeEvaluationTransport } from './transportNormalize.js';
@@ -102,7 +103,7 @@ function snippetAround(text, needle) {
   const leftBreak=Math.max(text.lastIndexOf('\n',i),text.lastIndexOf('.',i)); if (leftBreak >= start) start=leftBreak+1;
   const nextNl=text.indexOf('\n',i+needle.length); const nextDot=text.indexOf('.',i+needle.length);
   const candidates=[nextNl,nextDot].filter((x) => x >= 0); if (candidates.length) end=Math.min(end,Math.min(...candidates)+1);
-  return text.slice(start,end).trim();
+  return text.slice(start,end).trim();;
 }
 
 function augmentExplicitEvidence(result, maskedCv) {
@@ -189,6 +190,7 @@ export function validateAndSanitizeModelOutput(raw, maskedCv, cachedJd=null, cvV
   result.matches=(result.matches||[]).map(m=>({...m,dimension_support:Array.isArray(m.dimension_support)?m.dimension_support:[]}));
   result=cachedJd ? forceCachedJd(result,cachedJd) : canonicalizeColdStructure(result);
   result=verifyEvidenceProvenance(result,maskedCv,cvVisualAssets);
+  result=recoverTextFirstEvidence(result,maskedCv);
   result=ensureOneMatchPerRequirement(result);
   result=augmentExplicitEvidence(result,maskedCv);
   result=recoverSharedEvidence(result);

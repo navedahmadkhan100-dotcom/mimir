@@ -1,7 +1,7 @@
 import { unionRelevantEvidenceIds } from './evidenceRelevance.js';
 import { evidenceSupportsConcept } from './ontology.js';
 
-export const DIMENSION_ENGINE_VERSION = '5.0.0-requirement-dimensions';
+export const DIMENSION_ENGINE_VERSION = '5.1.0-evidence-stable-dimensions';
 
 export const DIMENSION_ENUM = Object.freeze([
   'capability','responsibility','context','scale','exactness','lifecycle','duration','count','recency',
@@ -11,7 +11,7 @@ const IMPORTANCE_WEIGHT = Object.freeze({ decisive:4, high:3, medium:2, supporti
 const RELATION_POINTS = Object.freeze({ direct:100, canonical:98, equivalent:95, implied:82, functional:79, transferable:62, adjacent:35, none:0 });
 const STATE_FACTOR = Object.freeze({ documented:1, listed:.68, inferred_graph:.82, inferred_behavioral:.65, unsettled:.55, missing:0, not_assessable:0, contradicted:0 });
 const ACTION_LEVEL_REQUIRED = Object.freeze({ own:5, lead:5, execute:4, coordinate:3, support:2, knowledge:0, unspecified:0 });
-const SCALE_REQ_RE=/\b(?:enterprise(?:-wide)?|global|large[-\s]?scale|multi[-\s]?(?:country|region|site)|at\s+scale|scalable)\b/i;
+const SCALE_REQ_RE=/\b(?:enterprise[-\s]?wide|organisation[-\s]?wide|organization[-\s]?wide|global(?:ly)?|large[-\s]?scale|multi[-\s]?(?:country|region|site|tenant)|at\s+scale|across\s+\d+\s+(?:countries|regions|sites|tenants)|\d{2,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?))\b/i;
 const OWN_RE=/\b(?:own(?:ed|ership)?|accountable|final\s+authority|responsible\s+for|define\s+and\s+own)\b/i;
 const LEAD_RE=/\b(?:lead|led|leadership|architect|design|govern)\b/i;
 const EXEC_RE=/\b(?:implement|build|develop|deploy|configure|engineer|execute)\b/i;
@@ -51,7 +51,7 @@ function inferResponsibilityLevel(req={}) {
 }
 
 export function deriveRequirementDimensions(req={}) {
-  const fromModel=(req.evaluation_dimensions||[]).filter(d=>DIMENSION_ENUM.includes(d.dimension)).map(d=>({
+  const fromModel=(req.evaluation_dimensions||[]).filter(d=>DIMENSION_ENUM.includes(d.dimension) && (d.dimension!=='scale' || SCALE_REQ_RE.test(String(req.text||'')))).map(d=>({
     dimension:d.dimension,
     importance:['decisive','high','medium','supporting'].includes(d.importance)?d.importance:'medium',
     critical:Boolean(d.critical),

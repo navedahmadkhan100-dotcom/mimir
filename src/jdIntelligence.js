@@ -3,7 +3,7 @@
  * Model-proposed semantic priorities are treated as bounded annotations;
  * ALL numeric weights are computed here, deterministically, from a frozen JD.
  */
-export const JD_INTELLIGENCE_VERSION = '5.0.0-dimension-aware-jd-intelligence';
+export const JD_INTELLIGENCE_VERSION = '5.1.0-evidence-stable-jd-intelligence';
 
 export const INTELLIGENCE_CATEGORIES = Object.freeze([
   'technical', 'functional_domain', 'operational_delivery', 'behavioral', 'eligibility',
@@ -62,7 +62,7 @@ export function normalizeJdIntelligence(jd = {}) {
       non_equivalents: (Array.isArray(req.non_equivalents) ? req.non_equivalents : []).slice(0, 5).map((x) => safeStr(x, 200)).filter(Boolean),
       pathway_ids: (Array.isArray(req.pathway_ids) ? req.pathway_ids : []).filter((x) => ids.has(x)).slice(0, 6),
       evaluation_dimensions:(Array.isArray(req.evaluation_dimensions)?req.evaluation_dimensions:[]).slice(0,8).map((d)=>({
-        dimension:['capability','responsibility','context','scale','exactness','lifecycle','duration','count'].includes(d?.dimension)?d.dimension:'capability',
+        dimension:['capability','responsibility','context','scale','exactness','lifecycle','duration','count','recency'].includes(d?.dimension)?d.dimension:'capability',
         importance:['decisive','high','medium','supporting'].includes(d?.importance)?d.importance:'medium',
         critical:Boolean(d?.critical),description:safeStr(d?.description,220),
       })),

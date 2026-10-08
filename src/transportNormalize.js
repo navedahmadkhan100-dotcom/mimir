@@ -22,6 +22,9 @@ function enumOr(value, allowed, fallback) { return allowed.has(value) ? value : 
 
 export function normalizeEvaluationTransport(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
+  const flatDimensions = arrayOf(source.dimension_support || source.dimensions);
+  const flatInstances = arrayOf(source.qualifying_instances || source.instances);
+  const flatPaths = arrayOf(source.inference_paths || source.paths);
   const evidence = arrayOf(source.evidence).map((item, index) => {
     const e = item && typeof item === 'object' ? item : {};
     const inferredSource = e.visual_asset_id || e.visual_observation ? 'visual' : 'text';
@@ -49,10 +52,12 @@ export function normalizeEvaluationTransport(raw) {
 
   const matches = arrayOf(source.matches).map((item) => {
     const m = item && typeof item === 'object' ? item : {};
-    const qualifying_instances = arrayOf(m.qualifying_instances).map((item) => {
+    const requirementId = String(m.requirement_id || '');
+    const nestedInstances = arrayOf(m.qualifying_instances);
+    const instanceSource = nestedInstances.length ? nestedInstances : flatInstances.filter((item) => String(item?.requirement_id || '') === requirementId);
+    const qualifying_instances = instanceSource.map((item) => {
       const q = item && typeof item === 'object' ? item : {};
       return {
-        ...q,
         project_key: String(q.project_key || ''),
         evidence_ids: arrayOf(q.evidence_ids).map(String).slice(0,10),
         role_alignment: enumOr(q.role_alignment, ROLE_ALIGNMENTS, 'unknown'),
@@ -63,28 +68,32 @@ export function normalizeEvaluationTransport(raw) {
       };
     }).slice(0,12);
 
-    const dimension_support = arrayOf(m.dimension_support).filter((item) => DIMENSIONS.has(item?.dimension)).map((item) => {
+    const nestedDimensions = arrayOf(m.dimension_support);
+    const dimensionSource = nestedDimensions.length ? nestedDimensions : flatDimensions.filter((item) => String(item?.requirement_id || '') === requirementId);
+    const dimension_support = dimensionSource.filter((item) => DIMENSIONS.has(item?.dimension)).map((item) => {
       const d = item && typeof item === 'object' ? item : {};
       return {
-        ...d,
         dimension: d.dimension,
-        evidence_ids: arrayOf(d.evidence_ids).map(String),
+        evidence_ids: arrayOf(d.evidence_ids).map(String).slice(0,10),
         relation: enumOr(d.relation, RELATIONS, 'none'),
         support_state: enumOr(d.support_state, SUPPORT_STATES, 'unsettled'),
         reason: String(d.reason || ''),
       };
-    }).slice(0,6);
+    }).slice(0,9);
+
+    const nestedPaths = arrayOf(m.inference_path);
+    const pathSource = nestedPaths.length ? nestedPaths : flatPaths.filter((item) => String(item?.requirement_id || '') === requirementId);
+    const inference_path = pathSource.map((step) => ({
+      from: String(step?.from || ''), relation: String(step?.relation || ''), to: String(step?.to || ''),
+    })).filter((step) => step.from || step.to).slice(0,4);
 
     return {
-      ...m,
-      requirement_id: String(m.requirement_id || ''),
+      requirement_id: requirementId,
       evidence_ids: arrayOf(m.evidence_ids).map(String).slice(0,10),
       relation: enumOr(m.relation, RELATIONS, 'none'),
       support_state: enumOr(m.support_state, SUPPORT_STATES, 'missing'),
       reason: String(m.reason || ''),
-      inference_path: arrayOf(m.inference_path).map((step) => ({
-        from: String(step?.from || ''), relation: String(step?.relation || ''), to: String(step?.to || ''),
-      })).slice(0,4),
+      inference_path,
       lifecycle_phases: arrayOf(m.lifecycle_phases).filter((v) => LIFECYCLE_PHASES.has(v)).slice(0,10),
       evidence_context_type: enumOr(m.evidence_context_type, EVIDENCE_CONTEXTS, 'unknown'),
       qualifying_instances,

@@ -1,7 +1,7 @@
 export const EVIDENCE_SEMANTICS_VERSION = '5.0.0-evidence-action-semantics';
 
 const ACTION_RULES = [
-  ['architected','architecture', /\b(?:architected|architecting|designed\s+(?:the\s+)?architecture|solution\s+architect(?:ure|ed)?)\b/i],
+  ['architected','architecture', /\b(?:architected|architecting|designed\s+(?:the\s+)?architecture|defined?\s+(?:the\s+)?(?:architecture|strategy|roadmap)|governed?\s+(?:the\s+)?architecture|established?\s+(?:the\s+)?(?:architecture|governance)|solution\s+architect(?:ure|ed)?)\b/i],
   ['designed','design', /\b(?:designed|designing|blueprinted|created\s+(?:the\s+)?design)\b/i],
   ['led','leadership', /\b(?:led|lead|headed|directed|managed|oversaw|oversee|overseeing|owned|ownership|responsible\s+for)\b/i],
   ['implemented','implementation', /\b(?:implemented|implementing|deployed|deployment|rolled\s+out|built|configured)\b/i],
@@ -15,7 +15,7 @@ const ACTION_RULES = [
   ['mentioned','mention', /\b(?:skills?|technologies|tools|environment)\b/i],
 ];
 
-const OWNERSHIP_STRONG = /\b(?:owned|ownership|responsible\s+for|accountable|led|headed|architected|designed|decision[-\s]?making)\b/i;
+const OWNERSHIP_STRONG = /\b(?:owned|ownership|responsible\s+for|accountable|led|headed|directed|architected|designed|defined|governed|established|orchestrated|decision[-\s]?making)\b/i;
 const OWNERSHIP_SHARED = /\b(?:co[-\s]?led|collaborat(?:ed|ion)|partnered|jointly|team\s+responsible|contributed)\b/i;
 const OWNERSHIP_WEAK = /\b(?:worked\s+alongside|assisted|supported|participated|exposure\s+to|familiar\s+with)\b/i;
 const SCALE_RE = /\b(\d{2,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?)|(?:multi[-\s]?million(?:[-\s]?(?:euro|dollar|pound))?|€|\$|£)\s?\d*[mk]?|enterprise[-\s]?wide|enterprise|global|multi[-\s]?country|multi[-\s]?region|large[-\s]?scale|international\s+24\/7)\b/ig;

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { jdIntelligenceGenerationSchema } from './schemas.js';
+import { jdIntelligenceGenerationSchema, providerSafeEvaluationSchema } from './schemas.js';
 import { JD_SYSTEM_INSTRUCTION, EVALUATION_SYSTEM_INSTRUCTION } from './prompt.js';
 
 export const MODEL_ID = 'gemini-3.5-flash-lite';
@@ -95,12 +95,44 @@ export class GeminiExtractor {
   }
 
   async evaluate(prompt, visualAssets = []) {
-    // IMPORTANT: Do NOT send warmEvaluationSchema to Gemini here. The CV schema
-    // is intentionally rich/deep (evidence -> matches -> qualifying instances ->
-    // dimension support). Gemini can reject complex response schemas with a
-    // generic HTTP 400 before inference. The exact semantic contract stays in
-    // EVALUATION_SYSTEM_INSTRUCTION and the full authoritative schema is applied
-    // locally with AJV before any scoring happens.
+    // Primary path: use a shallow provider-safe schema on Interactions. This keeps
+    // Gemini structurally anchored (especially text-vs-visual provenance and
+    // dimension rows) without exposing Mimir's deeply nested authoritative schema.
+    const input = [{ type: 'text', text: prompt }];
+    for (const asset of visualAssets) {
+      input.push({ type: 'text', text: visualAssetContext(asset) });
+      input.push({
+        type: 'image',
+        mime_type: asset.mimeType || 'image/jpeg',
+        data: asset.buffer.toString('base64'),
+      });
+    }
+
+    try {
+      const interaction = await this.client.interactions.create({
+        model: MODEL_ID,
+        store: false,
+        system_instruction: EVALUATION_SYSTEM_INSTRUCTION,
+        input,
+        response_format: {
+          type: 'text',
+          mime_type: 'application/json',
+          schema: providerSafeEvaluationSchema,
+        },
+        generation_config: { max_output_tokens: 14000 },
+      });
+      return {
+        json: parseJsonText(interaction.output_text, 'evaluation'),
+        usage: interaction.usage || null,
+        interactionId: interaction.id || null,
+        model: interaction.model || MODEL_ID,
+        transport: 'interactions-flat-structured-ajv',
+      };
+    } catch (structuredError) {
+      if (!invalidArgument(structuredError)) throw structuredError;
+      console.warn('[Mimir AI] Flat structured CV transport rejected; switching to JSON MIME transport.');
+    }
+
     const contents = [{ text: prompt }];
     for (const asset of visualAssets) {
       contents.push({ text: visualAssetContext(asset) });
@@ -113,9 +145,6 @@ export class GeminiExtractor {
     }
 
     try {
-      // Preferred path: JSON MIME mode, but deliberately NO provider-side deep
-      // response schema. This keeps JSON adherence while avoiding schema-parser
-      // INVALID_ARGUMENT failures.
       const response = await this.client.models.generateContent({
         model: MODEL_ID,
         contents,
@@ -125,33 +154,16 @@ export class GeminiExtractor {
           maxOutputTokens: 14000,
         },
       });
-
       return {
         json: parseJsonText(response.text, 'evaluation'),
         usage: response.usageMetadata || null,
         interactionId: null,
         model: MODEL_ID,
-        transport: 'generateContent-json-ajv',
+        transport: 'generateContent-json-local-ajv-fallback',
       };
     } catch (error) {
       if (!invalidArgument(error)) throw error;
-
-      // Compatibility fallback: if Google's GenerateContent transport itself
-      // rejects the request shape for this model/account, use the Interactions
-      // API that already powers Mimir's successful JD analysis. Crucially, this
-      // fallback also sends NO deep schema. It is a different transport contract,
-      // not a blind retry of the same invalid request.
-      console.warn('[Mimir AI] GenerateContent rejected CV request; switching to schema-free Interactions transport.');
-      const input = [{ type: 'text', text: prompt }];
-      for (const asset of visualAssets) {
-        input.push({ type: 'text', text: visualAssetContext(asset) });
-        input.push({
-          type: 'image',
-          mime_type: asset.mimeType || 'image/jpeg',
-          data: asset.buffer.toString('base64'),
-        });
-      }
-
+      console.warn('[Mimir AI] JSON MIME CV transport rejected; switching to schema-free Interactions fallback.');
       const interaction = await this.client.interactions.create({
         model: MODEL_ID,
         store: false,
@@ -159,14 +171,12 @@ export class GeminiExtractor {
         input,
         generation_config: { max_output_tokens: 14000 },
       });
-
       return {
         json: parseJsonText(interaction.output_text, 'evaluation'),
         usage: interaction.usage || null,
         interactionId: interaction.id || null,
         model: interaction.model || MODEL_ID,
-        transport: 'interactions-prompt-json-ajv-fallback',
+        transport: 'interactions-prompt-json-local-ajv-fallback',
       };
     }
-  }
-}
+  }}

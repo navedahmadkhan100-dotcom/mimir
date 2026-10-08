@@ -90,7 +90,7 @@ test('Marco regression: direct AI architecture ownership is not lost between evi
   const rows=Object.fromEntries(result.breakdownTable.map(r=>[r.requirement_id,r]));
   assert.ok(rows.R1.calculation.result >= 95, `R1 should preserve direct ownership evidence, got ${rows.R1.calculation.result}`);
   assert.ok(rows.R2.calculation.result >= 90, `R2 should cross-link relevant architecture ownership evidence, got ${rows.R2.calculation.result}`);
-  assert.ok(rows.R3.calculation.result >= 70 && rows.R3.calculation.result <= 90, `R3 should retain capability credit while allowing scale uncertainty, got ${rows.R3.calculation.result}`);
+  assert.ok(rows.R3.calculation.result >= 90, `R3 should not invent a scale penalty from the word enterprise alone, got ${rows.R3.calculation.result}`);
   assert.ok(result.finalScore >= 85, `Marco-like profile should remain a strong fit, got ${result.finalScore}`);
 });
 

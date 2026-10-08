@@ -3,7 +3,7 @@ import { deriveAdaptiveWeights, JD_INTELLIGENCE_VERSION } from './jdIntelligence
 import { evaluateRequirementDimensions, DIMENSION_ENGINE_VERSION } from './dimensionEngine.js';
 import { analyzeEvidenceSemantics } from './evidenceSemantics.js';
 
-export const SCORING_VERSION = '5.0.0-dimension-weighted-evidence-lineage';
+export const SCORING_VERSION = '5.1.0-evidence-stable-dimension-lineage';
 
 export const RELATION_BASE = Object.freeze({
   direct:100, canonical:98, equivalent:96, implied:90, functional:86, transferable:70, adjacent:45, none:0,

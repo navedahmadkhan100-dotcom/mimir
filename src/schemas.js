@@ -215,6 +215,76 @@ export const warmEvaluationSchema = {
   additionalProperties: false,
 };
 
+
+// Provider-safe evaluation schema: semantically complete but intentionally flat.
+// Gemini sees this shallow contract; Mimir reconstructs the authoritative nested
+// evaluationSchema locally before validation/scoring. This avoids provider-side
+// INVALID_ARGUMENT failures from deeply nested response schemas without weakening
+// the evidence model.
+export const providerSafeEvaluationSchema = {
+  type:'object',
+  properties:{
+    evidence:{
+      type:'array', maxItems:48, items:{
+        type:'object', additionalProperties:false,
+        properties:{
+          id:{type:'string'}, source_type:{type:'string',enum:EVIDENCE_SOURCE_ENUM}, quote:{type:'string'},
+          visual_asset_id:{type:['string','null']}, visual_observation:{type:'string'}, source_page:{type:['integer','null']}, source_hint:{type:'string'},
+          skills:{type:'array',items:{type:'string'},maxItems:10}, capabilities:{type:'array',items:{type:'string'},maxItems:10},
+          depth:{type:'string',enum:DEPTH_ENUM}, recency_year:{type:['integer','null']}, duration_months:{type:['integer','null']},
+          career_context:{type:'string'}, project_key:{type:'string'}, role_context:{type:'string'},
+          lifecycle_phases:{type:'array',items:{type:'string',enum:LIFECYCLE_PHASE_ENUM},maxItems:10},
+          evidence_context_type:{type:'string',enum:EVIDENCE_CONTEXT_ENUM},
+        },
+        required:['id','source_type','quote','visual_asset_id','visual_observation','source_page','source_hint','skills','capabilities','depth','recency_year','duration_months','career_context','project_key','role_context','lifecycle_phases','evidence_context_type'],
+      },
+    },
+    matches:{
+      type:'array', maxItems:24, items:{
+        type:'object', additionalProperties:false,
+        properties:{
+          requirement_id:{type:'string'}, evidence_ids:{type:'array',items:{type:'string'},maxItems:10},
+          relation:{type:'string',enum:RELATION_ENUM}, support_state:{type:'string',enum:SUPPORT_ENUM}, reason:{type:'string'},
+          lifecycle_phases:{type:'array',items:{type:'string',enum:LIFECYCLE_PHASE_ENUM},maxItems:10},
+          evidence_context_type:{type:'string',enum:EVIDENCE_CONTEXT_ENUM},
+        },
+        required:['requirement_id','evidence_ids','relation','support_state','reason','lifecycle_phases','evidence_context_type'],
+      },
+    },
+    dimension_support:{
+      type:'array', maxItems:144, items:{
+        type:'object', additionalProperties:false,
+        properties:{
+          requirement_id:{type:'string'}, dimension:{type:'string',enum:DIMENSION_ENUM}, evidence_ids:{type:'array',items:{type:'string'},maxItems:10},
+          relation:{type:'string',enum:RELATION_ENUM}, support_state:{type:'string',enum:SUPPORT_ENUM}, reason:{type:'string'},
+        },
+        required:['requirement_id','dimension','evidence_ids','relation','support_state','reason'],
+      },
+    },
+    qualifying_instances:{
+      type:'array', maxItems:96, items:{
+        type:'object', additionalProperties:false,
+        properties:{
+          requirement_id:{type:'string'}, project_key:{type:'string'}, evidence_ids:{type:'array',items:{type:'string'},maxItems:10},
+          role_alignment:{type:'string',enum:ROLE_ALIGNMENT_ENUM}, deployment_model:{type:'string',enum:DEPLOYMENT_MODEL_ENUM},
+          lifecycle_phases:{type:'array',items:{type:'string',enum:LIFECYCLE_PHASE_ENUM},maxItems:10},
+          evidence_context_type:{type:'string',enum:EVIDENCE_CONTEXT_ENUM}, reason:{type:'string'},
+        },
+        required:['requirement_id','project_key','evidence_ids','role_alignment','deployment_model','lifecycle_phases','evidence_context_type','reason'],
+      },
+    },
+    inference_paths:{
+      type:'array', maxItems:96, items:{
+        type:'object', additionalProperties:false,
+        properties:{ requirement_id:{type:'string'}, from:{type:'string'}, relation:{type:'string'}, to:{type:'string'} },
+        required:['requirement_id','from','relation','to'],
+      },
+    },
+  },
+  required:['evidence','matches','dimension_support','qualifying_instances','inference_paths'],
+  additionalProperties:false,
+};
+
 // New JD-only AI requests REQUIRE the semantic fields. Warm evaluation/cached
 // legacy objects continue to use the backward-compatible structuredJdSchema.
 export const jdIntelligenceGenerationSchema = structuredClone(structuredJdSchema);
