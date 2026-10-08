@@ -4,10 +4,13 @@ import { quoteExistsInMaskedCv } from './mask.js';
 import { reconcileRelation, conceptSurfaceForms } from './ontology.js';
 import { normalizeStructuredJd } from './requirementRules.js';
 import { normalizeJdIntelligence } from './jdIntelligence.js';
+import { normalizeEvaluationTransport } from './transportNormalize.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validateEvaluation = ajv.compile(evaluationSchema);
 const validateStructuredJdSchema = ajv.compile(structuredJdSchema);
+
+
 
 export function upgradeStructuredJd(value) {
   if (!value || typeof value !== 'object') return value;
@@ -176,6 +179,7 @@ function reconcileWithOntology(result) {
 }
 
 export function validateAndSanitizeModelOutput(raw, maskedCv, cachedJd=null, cvVisualAssets=[]) {
+  raw = { ...normalizeEvaluationTransport(raw), structured_jd: raw?.structured_jd };
   if (!validateEvaluation(raw)) {
     const details=ajv.errorsText(validateEvaluation.errors,{ separator:'; ' });
     throw new Error(`Gemini JSON failed schema validation: ${details}`);

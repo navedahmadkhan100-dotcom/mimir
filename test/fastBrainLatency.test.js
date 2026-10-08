@@ -19,8 +19,10 @@ test('structured-output arrays are bounded to avoid runaway JSON generation', ()
 
 test('Gemini adapter uses separate output budgets and avoids deprecated sampling controls', () => {
   const src = fs.readFileSync(new URL('../src/gemini.js', import.meta.url), 'utf8');
-  assert.match(src, /JD_SYSTEM_INSTRUCTION, 9000/);
-  assert.match(src, /EVALUATION_SYSTEM_INSTRUCTION, 14000/);
+  assert.match(src, /system_instruction:\s*JD_SYSTEM_INSTRUCTION/);
+  assert.match(src, /max_output_tokens:\s*9000/);
+  assert.match(src, /systemInstruction:\s*EVALUATION_SYSTEM_INSTRUCTION/);
+  assert.match(src, /maxOutputTokens:\s*14000/);
   assert.doesNotMatch(src, /temperature\s*:/);
   assert.doesNotMatch(src, /top_p\s*:/);
   assert.doesNotMatch(src, /top_k\s*:/);
