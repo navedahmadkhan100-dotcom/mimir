@@ -11,8 +11,8 @@ function apiUrl(path) {
 
 const $ = (id) => document.getElementById(id);
 const SAVED_JD_STORAGE_VERSION = 'mimir-v2.0.0'; // Preserve the user's existing browser JD vault.
-const ENGINE_CACHE_VERSION = 'mimir-v4.6.0-jd-intelligence';
-const JD_PROFILE_VERSION = '4.6.0-jd-first-adaptive';
+const ENGINE_CACHE_VERSION = 'mimir-v5.0.0-dimension-intelligence';
+const JD_PROFILE_VERSION = '5.0.0-dimension-aware-jd-intelligence';
 const STORAGE = {
   savedJds: `${SAVED_JD_STORAGE_VERSION}:saved-jds`,
   jdStructures: `${ENGINE_CACHE_VERSION}:jd-structures`,

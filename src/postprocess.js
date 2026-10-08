@@ -181,6 +181,8 @@ export function validateAndSanitizeModelOutput(raw, maskedCv, cachedJd=null, cvV
     throw new Error(`Gemini JSON failed schema validation: ${details}`);
   }
   let result=structuredClone(raw);
+  result.evidence=(result.evidence||[]).map(e=>({...e,evidence_context_type:e.evidence_context_type|| (e.source_type==='visual'?'visual':'unknown')}));
+  result.matches=(result.matches||[]).map(m=>({...m,dimension_support:Array.isArray(m.dimension_support)?m.dimension_support:[]}));
   result=cachedJd ? forceCachedJd(result,cachedJd) : canonicalizeColdStructure(result);
   result=verifyEvidenceProvenance(result,maskedCv,cvVisualAssets);
   result=ensureOneMatchPerRequirement(result);

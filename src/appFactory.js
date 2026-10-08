@@ -297,7 +297,7 @@ export function createMimirApp(options = {}) {
       // Mimir Evidence Intelligence pipeline. The model extracts semantics; deterministic code decides what the evidence is permitted to establish.
       const claimModel = buildClaimModel(structuredJd);
       const evidenceSemantics = analyzeEvidenceSemantics(sanitized.evidence);
-      const preOdinClaims = assessClaims({ claimModel, structuredJd, matches:sanitized.matches, evidenceSemantics });
+      const preOdinClaims = assessClaims({ claimModel, structuredJd, matches:sanitized.matches, evidenceSemantics, evidence:sanitized.evidence });
       const odinChallenges = runOdinReview(sanitized, preOdinClaims, evidenceSemantics);
       const claimAssessments = applyOdinToClaims(preOdinClaims, odinChallenges);
       const policyDecisions = buildPolicyDecisions({ structuredJd, matches:sanitized.matches, claimAssessments, evidence:sanitized.evidence });
@@ -306,6 +306,7 @@ export function createMimirApp(options = {}) {
         referenceYear: REFERENCE_YEAR,
         policyDecisions,
         claimAssessments,
+        evidenceSemantics,
       });
       const nextBestVerificationQuestions = buildVerificationQuestions(sanitized, odinChallenges, claimAssessments);
 

@@ -1,4 +1,4 @@
-export const CLAIM_MODEL_VERSION = '4.0.0-claim-model';
+export const CLAIM_MODEL_VERSION = '5.0.0-dimension-claim-model';
 
 const ACTION_PATTERNS = [
   ['architect', /\b(?:architect(?:ed|ing|ure)?|solution\s+design|technical\s+design)\b/i],
@@ -43,8 +43,9 @@ export function buildClaimModel(structuredJd = {}) {
   const claims = (structuredJd.requirements || []).map((req) => {
     const text = String(req.text || '');
     const requiredActions = inferRequiredActions(text);
-    const ownershipRequired = OWNERSHIP_RE.test(text) || requiredActions.some((a) => ['architect','design','lead'].includes(a));
-    const scaleRequired = SCALE_RE.test(text);
+    const evalDims=new Map((req.evaluation_dimensions||[]).map(d=>[d.dimension,d]));
+    const ownershipRequired = ['own','lead'].includes(req.responsibility_level) || Boolean(evalDims.get('responsibility')?.critical) || OWNERSHIP_RE.test(text) || requiredActions.some((a) => ['architect','design','lead'].includes(a));
+    const scaleRequired = Boolean(evalDims.get('scale')) || SCALE_RE.test(text);
     const dimensions = {
       technology: (req.target_concepts || []).length > 0 || (req.alternatives || []).length > 0,
       duration: Number(req.minimum_years) > 0,

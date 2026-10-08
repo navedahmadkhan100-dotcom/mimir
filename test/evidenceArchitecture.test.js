@@ -49,10 +49,11 @@ test('weak participation cannot entail architecture ownership', () => {
   assert.ok(odin.some((x) => x.code === 'WEAK_ACTION_OVERREACH'));
   const claims = applyOdinToClaims(pre, odin);
   const policies = buildPolicyDecisions({ structuredJd:jd, matches:result.matches, claimAssessments:claims, evidence:result.evidence });
-  assert.ok(policies[0].credit_cap <= 55);
+  assert.equal(policies[0].credit_cap, 100, 'coarse claim-state caps should not flatten dimension evidence');
 
-  const score = computeDeterministicScore(result, jd, { referenceYear:2026, policyDecisions:policies, claimAssessments:claims });
-  assert.ok(score.finalScore <= 55);
+  const score = computeDeterministicScore(result, jd, { referenceYear:2026, policyDecisions:policies, claimAssessments:claims, evidenceSemantics:semantics });
+  assert.ok(score.finalScore <= 60);
+  assert.ok(score.breakdownTable[0].dimension_breakdown.some((d) => d.dimension === 'responsibility' && d.score < 50));
   assert.equal(score.breakdownTable[0].score_lineage.policy_cap, policies[0].credit_cap);
 });
 

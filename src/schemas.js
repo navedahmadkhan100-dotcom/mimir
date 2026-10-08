@@ -19,7 +19,10 @@ export const SUPPORT_ENUM = [
 ];
 export const DEPTH_ENUM = ['led','owned','used','mentioned','unknown'];
 export const EVIDENCE_SOURCE_ENUM = ['text','visual'];
+export const EVIDENCE_CONTEXT_ENUM = ['role_project','professional_summary','skills_inventory','education','certification','employment_reference','visual','unknown'];
 export const ROLE_ALIGNMENT_ENUM = ['exact','equivalent','related','none','unknown'];
+export const DIMENSION_ENUM = ['capability','responsibility','context','scale','exactness','lifecycle','duration','count','recency'];
+export const DIMENSION_IMPORTANCE_ENUM = ['decisive','high','medium','supporting'];
 export const LIFECYCLE_PHASE_ENUM = [
   'discovery','assessment','requirements','blueprint_design','build_config','integration','data_migration',
   'testing','cutover','go_live','hypercare_stabilisation','operations','unknown',
@@ -40,6 +43,18 @@ const jdIntelligenceSchema = {
   required:['role_intent','role_family','role_focus','ambiguities','pathways'],
   additionalProperties:false,
 };
+
+const evaluationDimensionSchema = {
+  type:'object',
+  properties:{
+    dimension:{type:'string',enum:DIMENSION_ENUM},
+    importance:{type:'string',enum:DIMENSION_IMPORTANCE_ENUM},
+    critical:{type:'boolean'},
+    description:{type:'string'},
+  },
+  required:['dimension','importance','critical','description'],additionalProperties:false,
+};
+
 const requirementSchema = {
   type: 'object',
   properties: {
@@ -73,6 +88,7 @@ const requirementSchema = {
     partial_evidence:{type:'array',items:{type:'string'}},
     non_equivalents:{type:'array',items:{type:'string'}},
     pathway_ids:{type:'array',items:{type:'string'}},
+    evaluation_dimensions:{type:'array',items:evaluationDimensionSchema},
   },
   required: [
     'id','text','category','priority','priority_basis','assessment_hint','strictness','requirement_logic',
@@ -113,6 +129,7 @@ const evidenceSchema = {
     project_key: { type: 'string' },
     role_context: { type: 'string' },
     lifecycle_phases: { type: 'array', items: { type: 'string', enum: LIFECYCLE_PHASE_ENUM } },
+    evidence_context_type:{type:'string',enum:EVIDENCE_CONTEXT_ENUM},
   },
   required: [
     'id','source_type','quote','visual_asset_id','visual_observation','source_page','source_hint','skills','capabilities',
@@ -136,10 +153,24 @@ const qualifyingInstanceSchema = {
     role_alignment: { type: 'string', enum: ROLE_ALIGNMENT_ENUM },
     deployment_model: { type: 'string', enum: DEPLOYMENT_MODEL_ENUM },
     lifecycle_phases: { type: 'array', items: { type: 'string', enum: LIFECYCLE_PHASE_ENUM } },
+    evidence_context_type:{type:'string',enum:EVIDENCE_CONTEXT_ENUM},
     reason: { type: 'string' },
   },
   required: ['project_key','evidence_ids','role_alignment','deployment_model','lifecycle_phases','reason'],
   additionalProperties: false,
+};
+
+
+const dimensionSupportSchema = {
+  type:'object',
+  properties:{
+    dimension:{type:'string',enum:DIMENSION_ENUM},
+    evidence_ids:{type:'array',items:{type:'string'}},
+    relation:{type:'string',enum:RELATION_ENUM},
+    support_state:{type:'string',enum:SUPPORT_ENUM},
+    reason:{type:'string'},
+  },
+  required:['dimension','evidence_ids','relation','support_state','reason'],additionalProperties:false,
 };
 
 const matchSchema = {
@@ -152,7 +183,9 @@ const matchSchema = {
     reason: { type: 'string' },
     inference_path: { type: 'array', items: pathStepSchema },
     lifecycle_phases: { type: 'array', items: { type: 'string', enum: LIFECYCLE_PHASE_ENUM } },
+    evidence_context_type:{type:'string',enum:EVIDENCE_CONTEXT_ENUM},
     qualifying_instances: { type: 'array', items: qualifyingInstanceSchema },
+    dimension_support:{type:'array',items:dimensionSupportSchema},
   },
   required: ['requirement_id','evidence_ids','relation','support_state','reason','inference_path','lifecycle_phases','qualifying_instances'],
   additionalProperties: false,
@@ -190,5 +223,5 @@ jdIntelligenceGenerationSchema.properties.requirements.items.required = [
   ...jdIntelligenceGenerationSchema.properties.requirements.items.required,
   'capability_name', 'intelligence_category', 'importance', 'importance_reason',
   'explicit_tier', 'capability_group', 'responsibility_level',
-  'evidence_equivalents', 'partial_evidence', 'non_equivalents', 'pathway_ids',
+  'evidence_equivalents', 'partial_evidence', 'non_equivalents', 'pathway_ids', 'evaluation_dimensions',
 ];

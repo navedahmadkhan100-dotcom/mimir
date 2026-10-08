@@ -1,4 +1,5 @@
-export const ENTAILMENT_VERSION = '4.0.0-claim-entailment';
+import { unionRelevantEvidenceIds } from './evidenceRelevance.js';
+export const ENTAILMENT_VERSION = '5.0.0-crosslinked-dimension-entailment';
 
 const STATE_RANK = Object.freeze({
   contradicted:0, not_evidenced:1, ambiguous:2, contextual:3, partially_supported:4, supported:5, not_assessable:2,
@@ -21,7 +22,7 @@ function downgrade(current, next) {
   return (STATE_RANK[next] ?? 99) < (STATE_RANK[current] ?? 99) ? next : current;
 }
 
-export function assessClaims({ claimModel, structuredJd, matches = [], evidenceSemantics = [] }) {
+export function assessClaims({ claimModel, structuredJd, matches = [], evidenceSemantics = [], evidence = [] }) {
   const reqMap = new Map((structuredJd.requirements || []).map((r) => [r.id, r]));
   const matchMap = new Map(matches.map((m) => [m.requirement_id, m]));
   const semMap = new Map(evidenceSemantics.map((s) => [s.evidence_id, s]));
@@ -29,13 +30,15 @@ export function assessClaims({ claimModel, structuredJd, matches = [], evidenceS
   return (claimModel.claims || []).map((claim) => {
     const req = reqMap.get(claim.requirement_id) || {};
     const match = matchMap.get(claim.requirement_id) || { evidence_ids:[], relation:'none', support_state:'missing', qualifying_instances:[] };
-    const semantics = (match.evidence_ids || []).map((id) => semMap.get(id)).filter(Boolean);
+    const relevantIds = unionRelevantEvidenceIds(req, match, evidence, { threshold:.34, limit:10 });
+    const semantics = relevantIds.map((id) => semMap.get(id)).filter(Boolean);
     let state = baseState(match);
     const established = [];
     const notEstablished = [];
     const uncertainty = [];
 
     if (match.evidence_ids?.length) established.push('source-backed evidence exists');
+    if (relevantIds.some((id)=>!(match.evidence_ids||[]).includes(id))) established.push('corroborating evidence exists elsewhere in the CV');
     if (['direct','canonical','equivalent'].includes(match.relation)) established.push(`relationship is ${match.relation}`);
     else if (match.relation && match.relation !== 'none') uncertainty.push(`relationship is ${match.relation}, not exact equivalence`);
 
@@ -106,7 +109,7 @@ export function assessClaims({ claimModel, structuredJd, matches = [], evidenceS
       requirement_id: claim.requirement_id,
       statement: claim.statement,
       state,
-      evidence_ids: [...(match.evidence_ids || [])],
+      evidence_ids: [...new Set([...(match.evidence_ids || []), ...relevantIds])],
       relation: match.relation || 'none',
       established,
       not_established: notEstablished,

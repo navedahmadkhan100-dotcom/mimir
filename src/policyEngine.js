@@ -1,6 +1,6 @@
 import { RELATION_RANK } from './ontology.js';
 
-export const POLICY_VERSION = '4.0.0-evidence-policy';
+export const POLICY_VERSION = '5.0.0-boundary-only-policy';
 
 const NON_EQUIVALENT = [
   ['microsoft configuration manager','microsoft intune'],
@@ -15,6 +15,12 @@ function isNonEquivalent(a,b){
   return NON_EQUIVALENT.some(([p,q]) => (x.includes(p)&&y.includes(q)) || (x.includes(q)&&y.includes(p)));
 }
 
+/**
+ * Policy is intentionally narrow. It enforces hard factual/exact boundaries only.
+ * Partial/contextual evidence is scored by the dimension engine instead of being
+ * flattened into a coarse 55/80 cap. This prevents valid ownership/capability
+ * evidence from being destroyed by a generic claim-state label.
+ */
 export function buildPolicyDecisions({ structuredJd, matches = [], claimAssessments = [], evidence = [] }) {
   const matchMap = new Map(matches.map((m) => [m.requirement_id,m]));
   const claimMap = new Map(claimAssessments.map((c) => [c.requirement_id,c]));
@@ -26,11 +32,13 @@ export function buildPolicyDecisions({ structuredJd, matches = [], claimAssessme
     const reasons = [];
     let creditCap = 100;
 
-    if (claim?.state === 'partially_supported') { creditCap = Math.min(creditCap, 80); reasons.push('Claim is only partially supported.'); }
-    if (claim?.state === 'contextual') { creditCap = Math.min(creditCap, 55); reasons.push('Evidence is contextual; full capability is not established.'); }
-    if (claim?.state === 'ambiguous') { creditCap = Math.min(creditCap, 45); reasons.push('Evidence remains ambiguous.'); }
-    if (claim?.state === 'not_evidenced') { creditCap = 0; reasons.push('Requirement is not evidenced.'); }
-    if (claim?.state === 'contradicted') { creditCap = 0; reasons.push('Evidence contradicts the requirement.'); }
+    if (claim?.state === 'contradicted') {
+      creditCap = 0;
+      reasons.push('Verified evidence contradicts the requirement.');
+    } else if (claim?.state === 'not_evidenced' && !(match.evidence_ids || []).length && !(match.qualifying_instances || []).length) {
+      creditCap = 0;
+      reasons.push('No verified evidence is available for this requirement.');
+    }
 
     if (req.strictness === 'exact_required' && (RELATION_RANK[match.relation] || 0) < RELATION_RANK.equivalent) {
       creditCap = Math.min(creditCap, 45);
@@ -53,6 +61,7 @@ export function buildPolicyDecisions({ structuredJd, matches = [], claimAssessme
       decision:creditCap === 0 ? 'do_not_credit' : creditCap < 100 ? 'credit_with_boundary' : 'normal_credit',
       reasons,
       jd_specific_policy:true,
+      dimension_scoring_authoritative:true,
     };
   });
 }

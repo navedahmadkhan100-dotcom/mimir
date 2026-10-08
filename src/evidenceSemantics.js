@@ -1,9 +1,9 @@
-export const EVIDENCE_SEMANTICS_VERSION = '4.0.0-evidence-semantics';
+export const EVIDENCE_SEMANTICS_VERSION = '5.0.0-evidence-action-semantics';
 
 const ACTION_RULES = [
   ['architected','architecture', /\b(?:architected|architecting|designed\s+(?:the\s+)?architecture|solution\s+architect(?:ure|ed)?)\b/i],
   ['designed','design', /\b(?:designed|designing|blueprinted|created\s+(?:the\s+)?design)\b/i],
-  ['led','leadership', /\b(?:led|lead|headed|directed|managed|owned|ownership|responsible\s+for)\b/i],
+  ['led','leadership', /\b(?:led|lead|headed|directed|managed|oversaw|oversee|overseeing|owned|ownership|responsible\s+for)\b/i],
   ['implemented','implementation', /\b(?:implemented|implementing|deployed|deployment|rolled\s+out|built|configured)\b/i],
   ['migrated','migration', /\b(?:migrated|migration|transitioned|moderni[sz]ed)\b/i],
   ['administered','administration', /\b(?:administered|administration|operated|operations|maintained)\b/i],
@@ -18,7 +18,7 @@ const ACTION_RULES = [
 const OWNERSHIP_STRONG = /\b(?:owned|ownership|responsible\s+for|accountable|led|headed|architected|designed|decision[-\s]?making)\b/i;
 const OWNERSHIP_SHARED = /\b(?:co[-\s]?led|collaborat(?:ed|ion)|partnered|jointly|team\s+responsible|contributed)\b/i;
 const OWNERSHIP_WEAK = /\b(?:worked\s+alongside|assisted|supported|participated|exposure\s+to|familiar\s+with)\b/i;
-const SCALE_RE = /\b(\d{2,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|tenants?|applications?|workloads?|countries?|regions?)|enterprise[-\s]?wide|enterprise|global|multi[-\s]?country|multi[-\s]?region|large[-\s]?scale)\b/ig;
+const SCALE_RE = /\b(\d{2,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?)|(?:multi[-\s]?million(?:[-\s]?(?:euro|dollar|pound))?|€|\$|£)\s?\d*[mk]?|enterprise[-\s]?wide|enterprise|global|multi[-\s]?country|multi[-\s]?region|large[-\s]?scale|international\s+24\/7)\b/ig;
 const COMPLEXITY_RE = /\b(?:multi[-\s]?tenant|hybrid|regulated|mission[-\s]?critical|high[-\s]?availability|disaster\s+recovery|zero[-\s]?downtime|global|enterprise|complex|integration|migration|security|governance)\b/ig;
 
 const ACTION_LEVEL = Object.freeze({
@@ -64,6 +64,7 @@ export function analyzeEvidenceSemantics(evidenceItems = []) {
     return {
       evidence_id: e.id,
       source_type: e.source_type,
+      evidence_context_type: e.evidence_context_type || 'unknown',
       strongest_action: strongest,
       actions,
       ownership,

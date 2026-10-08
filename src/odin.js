@@ -1,4 +1,5 @@
-export const ODIN_VERSION = '4.0.0-adversarial-verifier';
+import { unionRelevantEvidenceIds } from './evidenceRelevance.js';
+export const ODIN_VERSION = '5.0.0-bidirectional-adversarial-verifier';
 
 const OWNERSHIP_REQ_RE = /\b(architect(?:ed|ure)?|design(?:ed|ing)?|led|leadership|owned|ownership|responsible\s+for|strategy|strategic)\b/i;
 const WEAK_ACTION_RE = /\b(exposure\s+to|familiar\s+with|worked\s+(?:with|alongside)|assisted|supported|participated|involved|knowledge\s+of)\b/i;
@@ -16,8 +17,9 @@ export function runOdinReview(result, claimAssessments = [], evidenceSemantics =
   for (const match of result.matches || []) {
     const req = reqMap.get(match.requirement_id);
     if (!req) continue;
-    const evidence = (match.evidence_ids || []).map((id) => evidenceMap.get(id)).filter(Boolean);
-    const semantics = (match.evidence_ids || []).map((id) => semMap.get(id)).filter(Boolean);
+    const relevantIds = unionRelevantEvidenceIds(req, match, [...evidenceMap.values()], { threshold:.34, limit:10 });
+    const evidence = relevantIds.map((id) => evidenceMap.get(id)).filter(Boolean);
+    const semantics = relevantIds.map((id) => semMap.get(id)).filter(Boolean);
     const combined = evidence.map(evidenceText).join(' ');
     const ownershipRequired = OWNERSHIP_REQ_RE.test(req.text || '') || (req.required_role_context || []).some((x) => OWNERSHIP_REQ_RE.test(x));
     const visualOnly = evidence.length > 0 && evidence.every((e) => e.source_type === 'visual');
@@ -44,8 +46,24 @@ export function runOdinReview(result, claimAssessments = [], evidenceSemantics =
         challenge:'The visual may support documented exposure to the depicted technology, but candidate authorship/ownership is outside the evidence boundary.',
         recommended_state:'contextual' });
     }
+    const hasDirectOwnership = semantics.some((s) => ['direct','shared'].includes(s.ownership) && Number(s.strongest_action?.level||0) >= 5);
+    const hasScale = semantics.some((s) => (s.scale||[]).length > 0);
+    if (claim?.not_established?.some((x)=>/ownership|design responsibility/i.test(x)) && hasDirectOwnership) {
+      challenges.push({ requirement_id:req.id, severity:'high', code:'FALSE_NEGATIVE_OWNERSHIP', direction:'upgrade',
+        challenge:'Claim review says ownership/design is missing, but relevant CV evidence contains direct/shared ownership or leadership language.',
+        recommended_state:['direct','canonical','equivalent'].includes(match.relation)?'supported':'partially_supported' });
+    }
+    if (claim?.not_established?.some((x)=>/scale/i.test(x)) && hasScale) {
+      challenges.push({ requirement_id:req.id, severity:'medium', code:'FALSE_NEGATIVE_SCALE', direction:'upgrade',
+        challenge:'Claim review says scale is missing, but relevant CV evidence contains an explicit enterprise/global/numeric scale signal.',
+        recommended_state:claim.state==='not_evidenced'?'partially_supported':claim.state });
+    }
+    if (claim?.state === 'not_evidenced' && relevantIds.length && ['direct','canonical','equivalent'].includes(match.relation)) {
+      challenges.push({ requirement_id:req.id, severity:'high', code:'FALSE_NEGATIVE_EVIDENCE', direction:'upgrade',
+        challenge:'Verified direct/equivalent evidence exists for a claim marked not evidenced.', recommended_state:'supported' });
+    }
     if (claim?.not_established?.length) {
-      challenges.push({ requirement_id:req.id, severity:'medium', code:'CLAIM_DIMENSION_GAP',
+      challenges.push({ requirement_id:req.id, severity:'medium', code:'CLAIM_DIMENSION_GAP', direction:'review',
         challenge:`Claim-level review found unresolved dimensions: ${claim.not_established.join('; ')}`,
         recommended_state:claim.state });
     }
@@ -66,9 +84,18 @@ export function applyOdinToClaims(claimAssessments = [], challenges = []) {
   return claimAssessments.map((claim) => {
     let state = claim.state;
     const relevant = byReq.get(claim.requirement_id) || [];
+    // First apply conservative downgrades.
     for (const c of relevant) {
+      if (c.direction === 'upgrade') continue;
       const next = c.recommended_state;
       if (next && (rank[next] ?? 99) < (rank[state] ?? 99)) state = next;
+    }
+    // Then permit evidence-backed false-negative repairs. These are deterministic
+    // challenge codes generated only when relevant verified evidence exists.
+    for (const c of relevant) {
+      if (c.direction !== 'upgrade') continue;
+      const next = c.recommended_state;
+      if (next && (rank[next] ?? -1) > (rank[state] ?? -1)) state = next;
     }
     return { ...claim, pre_odin_state:claim.state, state, odin_challenge_codes:relevant.map((c)=>c.code) };
   });
