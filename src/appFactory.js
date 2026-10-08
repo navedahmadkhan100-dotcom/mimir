@@ -219,6 +219,18 @@ export function createMimirApp(options = {}) {
   }));
 
   // JD-only analysis: the candidate CV is NEVER present in this request or model call.
+
+  // Fast-Brain visual budget: text-rich documents rarely need every decorative/
+  // vector-heavy page sent to the model. Browser discovery already orders hinted
+  // pages first. Scanned/image-heavy documents keep the full prepared set.
+  function modelVisualBudget(kind, text, assets) {
+    const list = Array.isArray(assets) ? assets : [];
+    const chars = String(text || '').trim().length;
+    if (chars < 700) return list;
+    const cap = kind === 'JD' ? 2 : 4;
+    return list.slice(0, cap);
+  }
+
   app.post('/api/jd/analyze', async (req, res) => {
     try {
       if (!req.body?.privacy?.clientPrepared) return res.status(400).json({ error:'Client privacy preparation is required.' });
@@ -228,14 +240,15 @@ export function createMimirApp(options = {}) {
       const assets=decodePreparedVisualAssets({ jdVisualAssets:req.body.jdVisualAssets || [] })
         .filter((a)=>a.documentKind==='JD').map((a)=>({ ...a, hash:sha256(a.base64) }));
       const masked=maskJdText(jdRaw);
+      const modelAssets=modelVisualBudget('JD', masked.maskedText, assets);
       const jdHash=sha256(`${normalizeForHash(masked.maskedText)}|visual:${assets.map((a)=>a.hash).join('|')}`);
       const gateway=extractor();
-      const run=await gateway.structureJd(structureJdPrompt(masked.maskedText),assets);
+      const run=await gateway.structureJd(structureJdPrompt(masked.maskedText),modelAssets);
       const structuredJd=canonicalizeStructuredJd(run.json);
       const jdAudit=auditStructuredJd(structuredJd);
       return res.json({ jdHash, structuredJd, jdIntelligence:jdIntelligenceSummary(structuredJd,effectiveAssessmentMode), jdAudit,
         analysisMeta:{ model:MODEL_ID, promptVersion:JD_STRUCTURE_PROMPT_VERSION, intelligenceVersion:JD_INTELLIGENCE_VERSION,
-          usage:run.usage || null, interactionId:run.interactionId || null, candidateDataSent:false } });
+          usage:run.usage || null, interactionId:run.interactionId || null, candidateDataSent:false, visualAssetsPrepared:assets.length, visualAssetsSent:modelAssets.length } });
     } catch (error) {
       console.error('[Mimir JD intelligence error]',error?.stack || error?.message || error);
       const message=error?.message || 'JD Intelligence analysis failed.';
@@ -268,6 +281,8 @@ export function createMimirApp(options = {}) {
       const cvMasked = maskCandidateText(cvRaw);
       const residualSensitiveTerms = collectCandidateSensitiveTerms(cvMasked.maskedText);
       const jdMasked = jdRaw ? maskJdText(jdRaw) : { maskedText: '', report: {} };
+      const modelJdVisualAssets = modelVisualBudget('JD', jdMasked.maskedText, jdVisualAssets);
+      const modelCvVisualAssets = modelVisualBudget('CV', cvMasked.maskedText, cvVisualAssets);
 
       const jdVisualSignature = jdVisualAssets.map((asset) => asset.hash).join('|');
       const cvVisualSignature = cvVisualAssets.map((asset) => asset.hash).join('|');
@@ -284,13 +299,13 @@ export function createMimirApp(options = {}) {
       let jdStructureRun = null;
       let structuredJd = cachedStructuredJd;
       if (!structuredJd) {
-        jdStructureRun = await gateway.structureJd(structureJdPrompt(jdMasked.maskedText), jdVisualAssets);
+        jdStructureRun = await gateway.structureJd(structureJdPrompt(jdMasked.maskedText), modelJdVisualAssets);
         structuredJd = canonicalizeStructuredJd(jdStructureRun.json);
       }
 
       const prompt = warmPrompt(structuredJd, cvMasked.maskedText);
-      const llm = await gateway.evaluate(prompt, cvVisualAssets);
-      const sanitized = validateAndSanitizeModelOutput({ ...llm.json, structured_jd:structuredJd }, cvMasked.maskedText, structuredJd, cvVisualAssets);
+      const llm = await gateway.evaluate(prompt, modelCvVisualAssets);
+      const sanitized = validateAndSanitizeModelOutput({ ...llm.json, structured_jd:structuredJd }, cvMasked.maskedText, structuredJd, modelCvVisualAssets);
       const jdAudit = auditStructuredJd(structuredJd);
       const jdIntelligence = jdIntelligenceSummary(structuredJd,effectiveAssessmentMode);
 
@@ -404,9 +419,9 @@ export function createMimirApp(options = {}) {
         documentIntelligence: {
           jd: req.body.jdDocumentIntelligence || {},
           cv: req.body.cvDocumentIntelligence || {},
-          visualAssetsSent: visualAssets.length,
-          jdVisualAssetsSent: jdVisualAssets.length,
-          cvVisualAssetsSent: cvVisualAssets.length,
+          visualAssetsSent: modelJdVisualAssets.length + modelCvVisualAssets.length,
+          jdVisualAssetsSent: modelJdVisualAssets.length,
+          cvVisualAssetsSent: modelCvVisualAssets.length,
         },
         audit,
         scoringMeta: score.scoringMeta,

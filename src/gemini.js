@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { warmEvaluationSchema, jdIntelligenceGenerationSchema } from './schemas.js';
-import { SYSTEM_INSTRUCTION } from './prompt.js';
+import { JD_SYSTEM_INSTRUCTION, EVALUATION_SYSTEM_INSTRUCTION } from './prompt.js';
 
 export const MODEL_ID = 'gemini-3.5-flash-lite';
 
@@ -30,7 +30,7 @@ export class GeminiExtractor {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  async runInteraction(prompt, visualAssets, schema) {
+  async runInteraction(prompt, visualAssets, schema, systemInstruction, maxOutputTokens) {
     const input = [{ type: 'text', text: prompt }];
     for (const asset of visualAssets) {
       input.push({ type: 'text', text: visualAssetContext(asset) });
@@ -44,7 +44,7 @@ export class GeminiExtractor {
     return this.client.interactions.create({
       model: MODEL_ID,
       store: false,
-      system_instruction: SYSTEM_INSTRUCTION,
+      system_instruction: systemInstruction,
       input,
       response_format: {
         type: 'text',
@@ -55,13 +55,13 @@ export class GeminiExtractor {
         temperature: 0,
         seed: 424242,
         thinking_level: 'minimal',
-        max_output_tokens: 20000,
+        max_output_tokens: maxOutputTokens,
       },
     });
   }
 
   async structureJd(prompt, visualAssets = []) {
-    const interaction = await this.runInteraction(prompt, visualAssets, jdIntelligenceGenerationSchema);
+    const interaction = await this.runInteraction(prompt, visualAssets, jdIntelligenceGenerationSchema, JD_SYSTEM_INSTRUCTION, 9000);
     return {
       json: parseJsonOutput(interaction, 'JD structure'),
       usage: interaction.usage || null,
@@ -71,7 +71,7 @@ export class GeminiExtractor {
   }
 
   async evaluate(prompt, visualAssets = []) {
-    const interaction = await this.runInteraction(prompt, visualAssets, warmEvaluationSchema);
+    const interaction = await this.runInteraction(prompt, visualAssets, warmEvaluationSchema, EVALUATION_SYSTEM_INSTRUCTION, 14000);
     return {
       json: parseJsonOutput(interaction, 'evaluation'),
       usage: interaction.usage || null,
