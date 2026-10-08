@@ -15,37 +15,57 @@ const make = (rs, data={}) => normalizeJdIntelligence({role_title:'Benchmark Rol
   requirements:rs});
 const weight = (jd,path=null)=>deriveAdaptiveWeights(jd,effectiveAssessmentMode,path);
 
-test('JD-only Gemini schema requires semantic responsibility and importance fields, separate from legacy cached schema',()=>{
+function sumWeights(w){ return Object.values(w.weightsByRequirement).reduce((a,b)=>a+b,0); }
+
+test('JD-only schema still requires semantic responsibility and importance fields',()=>{
   assert.ok(jdIntelligenceGenerationSchema.required.includes('intelligence'));
   assert.ok(jdIntelligenceGenerationSchema.properties.requirements.items.required.includes('responsibility_level'));
 });
 
-test('90%-technical JD can result in over 85% technical without fixed role-title weights',()=>{
+test('qualification ledger retires technical/functional/operational percentage scoring',()=>{
   const rs=[...Array.from({length:9},(_,i)=>mk(`T${i}`)),mk('delivery','operational_delivery',{importance:'medium'})];
   const w=weight(make(rs));
-  assert.ok(w.categoryWeights.technical>85,JSON.stringify(w.categoryWeights));
-  assert.equal(w.unrounded_total,100);
+  assert.deepEqual(w.categoryWeights,{});
+  assert.ok(Math.abs(sumWeights(w)-100)<.01);
+  assert.equal(w.distinct_scored_qualifications,10);
+  assert.ok(w.roleEmphasis.length>0);
 });
 
-test('BlackRock PM delivery-heavy JD outweighs technical keywords',()=>{
+test('decisive delivery qualifications outweigh supporting tool mentions without category buckets',()=>{
   const rs=[mk('Sybase','technical',{importance:'supporting'}),mk('SQL','technical',{importance:'supporting'}),
     ...Array.from({length:6},(_,i)=>mk(`program${i}`,'operational_delivery',{importance:'high'})),
     mk('investment domain','functional_domain',{importance:'medium'})];
   const w=weight(make(rs));
-  assert.ok(w.categoryWeights.operational_delivery>65,JSON.stringify(w.categoryWeights));
+  const deliveryTotal=Array.from({length:6},(_,i)=>w.weightsByRequirement[`program${i}`]).reduce((a,b)=>a+b,0);
+  const toolTotal=w.weightsByRequirement.Sybase+w.weightsByRequirement.SQL;
+  assert.ok(deliveryTotal>toolTotal*3,JSON.stringify(w.weightsByRequirement));
+  assert.deepEqual(w.categoryWeights,{});
 });
 
 test('repeating the same capability cannot inflate its total weight',()=>{
   const one=make([mk('terraform'),mk('go-live','operational_delivery')]);
   const duplicate=make([mk('terraform'),mk('terraform copy','technical',{capability_group:'group terraform'}),mk('go-live','operational_delivery')]);
-  assert.equal(weight(one).categoryWeights.technical,weight(duplicate).categoryWeights.technical);
-  assert.ok(Math.abs(weight(duplicate).weightsByRequirement.terraform-weight(duplicate).weightsByRequirement['terraform copy'])<1e-6);
+  const a=weight(one),b=weight(duplicate);
+  const oneTerraform=a.weightsByRequirement.terraform;
+  const duplicateTerraform=b.weightsByRequirement.terraform+b.weightsByRequirement['terraform copy'];
+  assert.ok(Math.abs(oneTerraform-duplicateTerraform)<1e-6);
+  assert.ok(Math.abs(b.weightsByRequirement.terraform-b.weightsByRequirement['terraform copy'])<1e-6);
 });
 
-test('explicit P1 vs P3 skills have meaningfully different scores',()=>{
+test('explicit P1 vs P3 skills have meaningfully different weights',()=>{
   const jd=make([mk('Agents','technical',{explicit_tier:'P1'}),mk('LlamaIndex','technical',{explicit_tier:'P3'})]);
   const w=weight(jd);
   assert.ok(w.weightsByRequirement.Agents>2*w.weightsByRequirement.LlamaIndex);
+});
+
+test('specific stakeholder collaboration remains a score-bearing senior responsibility while generic soft skills are verification-only',()=>{
+  const stakeholder=mk('Stakeholders','behavioral',{text:'Collaborate with product, data, and IT stakeholders',category:'behavioral',requirement_type:'behavioral',assessment_hint:'verify',capability_group:'stakeholder alignment'});
+  const generic=mk('Communication','behavioral',{text:'Strong communication skills',category:'behavioral',requirement_type:'behavioral',assessment_hint:'verify'});
+  const w=weight(make([stakeholder,generic,mk('AI architecture')]));
+  assert.equal(effectiveAssessmentMode(stakeholder),'score');
+  assert.equal(effectiveAssessmentMode(generic),'verify');
+  assert.ok(w.weightsByRequirement.Stakeholders>0);
+  assert.equal(w.weightsByRequirement.Communication,0);
 });
 
 test('generic reliability and location eligibility do not generate zero-scored capability requirements',()=>{
@@ -74,19 +94,22 @@ test('Pensions Tier 1 and Tier 2 candidate routes remain separate',()=>{
   assert.equal(jdIntelligenceSummary(jd,effectiveAssessmentMode).pathway_weights.length,2);
 });
 
-test('category groups normalize to 100% and returned weights are deterministic across repeated calls',()=>{
+test('qualification weights normalize to 100% and are deterministic across repeated calls',()=>{
   const jd=make([mk('RHEL'),mk('LinuxONE'),mk('service launch','operational_delivery'),mk('handover','operational_delivery')]);
   const a=weight(jd),b=weight(structuredClone(jd));
   assert.deepEqual(a,b);
-  assert.ok(Math.abs(Object.values(a.categoryWeights).reduce((x,y)=>x+y,0)-100)<.01);
+  assert.ok(Math.abs(sumWeights(a)-100)<.01);
+  assert.deepEqual(a.categoryWeights,{});
   assert.equal(jd.intelligence.profile_version,JD_INTELLIGENCE_VERSION);
 });
 
-test('priority and mode are separate: a critical onsite gate is not scored as a technical skill',()=>{
+test('priority and assessment mode are separate: a critical onsite gate is not score-bearing',()=>{
   const req=mk('Bournemouth 5-days onsite','eligibility',{priority:'dealbreaker',assessment_hint:'gate',text:'Bournemouth 5 days onsite required'});
   assert.equal(effectiveAssessmentMode(req),'gate');
   const w=weight(make([req,mk('BPNM 2.0','functional_domain')]));
-  assert.equal(w.categoryWeights.functional_domain,100);
+  assert.equal(w.weightsByRequirement['Bournemouth 5-days onsite'],0);
+  assert.equal(w.weightsByRequirement['BPNM 2.0'],100);
+  assert.deepEqual(w.categoryWeights,{});
 });
 
 test('JD ambiguity in alternate stacks is preserved, not silently corrected',()=>{

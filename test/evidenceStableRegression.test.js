@@ -5,7 +5,7 @@ import { recoverTextFirstEvidence } from '../src/textEvidenceRecovery.js';
 import { analyzeEvidenceSemantics } from '../src/evidenceSemantics.js';
 import { computeDeterministicScore } from '../src/scoring.js';
 import { deriveRequirementDimensions } from '../src/dimensionEngine.js';
-import { normalizeEvaluationTransport } from '../src/transportNormalize.js';
+import { normalizeEvaluationTransport, normalizeJdTransport } from '../src/transportNormalize.js';
 
 function req(id,text,overrides={}) {
   return {
@@ -81,4 +81,31 @@ test('flat provider transport reconstructs nested dimensions and instances local
   assert.equal(normalized.matches[0].dimension_support[0].dimension,'capability');
   assert.equal(normalized.matches[0].qualifying_instances[0].project_key,'P1');
   assert.equal(normalized.matches[0].inference_path[0].from,'A');
+});
+
+
+test('schema-free JD normalization repairs incomplete authoritative-looking nested output locally', () => {
+  const normalized=normalizeJdTransport({
+    role_title:'AI Architect',role_summary:'Own enterprise AI architecture',
+    intelligence:{role_intent:'Lead AI architecture',role_family:'Architecture',role_focus:'AI platforms',ambiguities:[],pathways:[]},
+    requirements:[{id:'R9',text:'Define and own AI architecture strategy',priority:'required',capability_name:'AI architecture strategy',responsibility_level:'own'}],
+  });
+  assert.equal(normalized.requirements.length,1);
+  assert.equal(normalized.requirements[0].id,'R9');
+  assert.equal(normalized.requirements[0].responsibility_level,'own');
+  assert.equal(normalized.requirements[0].assessment_hint,'score');
+  assert.equal(normalized.requirements[0].requirement_logic,'single');
+  assert.equal(normalized.requirements[0].importance,'medium');
+  assert.equal(normalized.intelligence.role_intent,'Lead AI architecture');
+});
+
+
+
+
+
+test('bare enterprise context does not count as scale evidence', () => {
+  const plain=analyzeEvidenceSemantics([{id:'E1',source_type:'text',quote:'Delivered enterprise system integration and API architecture.'}])[0];
+  const scaled=analyzeEvidenceSemantics([{id:'E2',source_type:'text',quote:'Scaled global 24/7 services across 45 FTE and multiple countries.'}])[0];
+  assert.equal(plain.scale.length,0);
+  assert.ok(scaled.scale.length>0);
 });

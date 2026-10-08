@@ -1,9 +1,10 @@
+import { deriveQualificationWeights, qualificationAssessmentMode, QUALIFICATION_LEDGER_VERSION } from './qualificationLedger.js';
 /**
  * Mimir JD Intelligence Core v4.6.
  * Model-proposed semantic priorities are treated as bounded annotations;
  * ALL numeric weights are computed here, deterministically, from a frozen JD.
  */
-export const JD_INTELLIGENCE_VERSION = '5.1.0-evidence-stable-jd-intelligence';
+export const JD_INTELLIGENCE_VERSION = '6.0.0-qualification-ledger-jd-intelligence';
 
 export const INTELLIGENCE_CATEGORIES = Object.freeze([
   'technical', 'functional_domain', 'operational_delivery', 'behavioral', 'eligibility',
@@ -70,62 +71,39 @@ export function normalizeJdIntelligence(jd = {}) {
   };
 }
 
-/** Score weights calculated from distinct capability groups, not keyword counts.
- * The caller controls which requirements are CV-assessable: gates, generic traits,
- * and explicitly preferred skills are NOT silently treated as failed CV evidence.
+/**
+ * Compatibility wrapper.  Mimir v6 no longer scores broad intelligence
+ * categories.  Each independently assessable qualification receives a direct
+ * ledger weight; categoryWeights remains empty so legacy callers cannot turn
+ * the role into misleading percentages such as "100% technical".
  */
-export function deriveAdaptiveWeights(jd = {}, assessMode = () => 'score', selectedPathway = null) {
-  const rs = jd.requirements || [];
-  const eligible = rs.filter((r) => assessMode(r) === 'score' && (!r.pathway_ids?.length || (selectedPathway && r.pathway_ids.includes(selectedPathway))));
-  const groups = new Map();
-  for (const r of eligible) {
-    const cat = categoryFor(r);
-    const tier = TIER_FACTOR[r.explicit_tier] ?? 1;
-    const value = (PRIORITY_FACTOR[r.priority] ?? 1) * (IMPORTANCE_FACTOR[priorityFor(r)] ?? 1) * tier;
-    if (value <= 0) continue;
-    const key = `${cat}:${safeStr(r.capability_group || r.capability_name || r.id).toLowerCase()}`;
-    const group = groups.get(key) || { category:cat, strength:0, items:[] };
-    group.strength = Math.max(group.strength, value); // duplicate bullets do not increase importance
-    group.items.push(r.id);
-    groups.set(key, group);
-  }
-  const sum = [...groups.values()].reduce((n, g) => n + g.strength, 0);
-  const weightsByRequirement = Object.fromEntries(rs.map((r) => [r.id, 0]));
-  const categoryWeights = Object.fromEntries(INTELLIGENCE_CATEGORIES.map((c) => [c, 0]));
-  for (const g of groups.values()) {
-    const portion = sum ? 100 * g.strength / sum : 0;
-    categoryWeights[g.category] += portion;
-    const split = portion / g.items.length;
-    for (const id of g.items) weightsByRequirement[id] = split;
-  }
-  const requirementWeights = Object.fromEntries(Object.entries(weightsByRequirement).map(([id, w]) => [id, round(w, 6)]));
-  return {
-    policy_version: JD_INTELLIGENCE_VERSION,
-    weighting_source: 'deterministic_from_jd_importance_and_capability_groups',
-    selected_pathway: selectedPathway,
-    weightsByRequirement: requirementWeights,
-    categoryWeights: Object.fromEntries(Object.entries(categoryWeights).map(([k, v]) => [k, round(v)])),
-    distinct_scored_capabilities: groups.size,
-    score_bearing_requirements: eligible.length,
-    unrounded_total: round(sum ? 100 : 0),
-  };
+export function deriveAdaptiveWeights(jd = {}, assessMode = qualificationAssessmentMode, selectedPathway = null) {
+  // assessMode is accepted for backward compatibility; qualificationAssessmentMode
+  // is authoritative in the ledger and applies the same gate/verify exclusions.
+  void assessMode;
+  return deriveQualificationWeights(jd, selectedPathway);
 }
 
-export function jdIntelligenceSummary(jd = {}, assessMode = () => 'score') {
+export function jdIntelligenceSummary(jd = {}, assessMode = qualificationAssessmentMode) {
   const normalized = normalizeJdIntelligence(jd);
   const pathways = normalized.intelligence.pathways;
   const defaultPath = pathways.length ? pathways[0].id : null;
   const weights = deriveAdaptiveWeights(normalized, assessMode, defaultPath);
   return {
     version: JD_INTELLIGENCE_VERSION,
+    ledger_version: QUALIFICATION_LEDGER_VERSION,
     ...normalized.intelligence,
-    category_weights: weights.categoryWeights,
+    category_weights: {},
+    role_emphasis: weights.roleEmphasis || [],
+    qualification_groups: weights.qualificationGroups || [],
     preview_pathway: defaultPath,
-    pathway_weights: pathways.map(p => ({id:p.id,label:p.label,category_weights:deriveAdaptiveWeights(normalized,assessMode,p.id).categoryWeights})),
+    pathway_weights: pathways.map(p => ({
+      id:p.id,label:p.label,role_emphasis:deriveAdaptiveWeights(normalized,assessMode,p.id).roleEmphasis || []
+    })),
     requirements: normalized.requirements.map((r) => ({
       id:r.id, capability:r.capability_name, category:r.intelligence_category, importance:r.importance,
       priority:r.priority, tier:r.explicit_tier, responsibility_level:r.responsibility_level,
-      assessment_mode:assessMode(r), weight_percent:weights.weightsByRequirement[r.id],
+      assessment_mode:qualificationAssessmentMode(r), weight_percent:weights.weightsByRequirement[r.id],
       importance_reason:r.importance_reason, evidence_equivalents:r.evidence_equivalents,
       partial_evidence:r.partial_evidence, non_equivalents:r.non_equivalents,
       pathway_ids:r.pathway_ids, evaluation_dimensions:r.evaluation_dimensions,

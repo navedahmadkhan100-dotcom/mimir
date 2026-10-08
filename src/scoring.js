@@ -2,8 +2,9 @@ import { evidenceSupportsConcept } from './ontology.js';
 import { deriveAdaptiveWeights, JD_INTELLIGENCE_VERSION } from './jdIntelligence.js';
 import { evaluateRequirementDimensions, DIMENSION_ENGINE_VERSION } from './dimensionEngine.js';
 import { analyzeEvidenceSemantics } from './evidenceSemantics.js';
+import { qualificationAssessmentMode, QUALIFICATION_LEDGER_VERSION } from './qualificationLedger.js';
 
-export const SCORING_VERSION = '5.1.0-evidence-stable-dimension-lineage';
+export const SCORING_VERSION = '6.0.0-qualification-ledger-scoring';
 
 export const RELATION_BASE = Object.freeze({
   direct:100, canonical:98, equivalent:96, implied:90, functional:86, transferable:70, adjacent:45, none:0,
@@ -36,20 +37,7 @@ export function recencyAdjustment(recencyYear,referenceYear){
   const diff=Math.max(0,referenceYear-year); if (diff<=2) return 0; if (diff<=4) return -3; if (diff<=7) return -7; return -12;
 }
 
-export function effectiveAssessmentMode(req){
-  if ((req.priority || 'standard')==='nice_to_have') return 'exclude';
-  if (req.assessment_hint === 'exclude') return 'exclude';
-  if (req.assessment_hint === 'gate' || req.intelligence_category === 'eligibility') return 'gate';
-  if (req.assessment_hint === 'verify' && ['behavioral','factual_gate'].includes(req.requirement_type)) return req.requirement_type === 'behavioral' ? 'verify' : 'gate';
-  const text=req.text || ''; const category=req.category || 'other';
-  if (req.requirement_type==='factual_gate') return 'gate';
-  if (category==='work_authorization' || WORK_AUTH_RE.test(text)) return 'gate';
-  if (category==='location' || LOCATION_GATE_RE.test(text)) return 'gate';
-  if (category==='language' && LANGUAGE_LEVEL_RE.test(text)) return 'gate';
-  if (req.requirement_type==='behavioral' || category==='behavioral' || req.intelligence_category==='behavioral' || GENERIC_BEHAVIORAL_RE.test(text)) return 'verify';
-  if ((category==='certification' || category==='education') && req.priority==='dealbreaker') return 'gate';
-  return 'score';
-}
+export function effectiveAssessmentMode(req){ return qualificationAssessmentMode(req); }
 
 function evidenceSortValue(e,referenceYear){
   const sourceRank={employment_reference:7,role_project:7,certification:6,education:5,professional_summary:4,skills_inventory:3,visual:2,unknown:4}[e.evidence_context_type||'unknown']||4;
@@ -211,7 +199,7 @@ export function computeDeterministicScore(llmResponse,structuredJd,options={}){
   const evidenceSemantics=(options.evidenceSemantics&&options.evidenceSemantics.length)?options.evidenceSemantics:analyzeEvidenceSemantics([...evidenceMap.values()]);
   const paths=selectedPathwayAndWeights(structuredJd,matchMap,evidenceMap,policyMap,referenceYear,evidenceSemantics);
   let totalWeight=0,earned=0,hasDealbreaker=false; const breakdownTable=[],gateChecks=[],verificationItems=[],constraintChecks=[];
-  const componentAccumulator={skills:{total:0,earned:0},experience:{total:0,earned:0}}; let depthWeighted=0,depthWeight=0;
+  let coverageWeight=0, capabilityWeight=0, capabilityEarned=0; let depthWeighted=0,depthWeight=0;
 
   for(const req of structuredJd.requirements||[]){
     const match=matchMap.get(req.id)||{requirement_id:req.id,evidence_ids:[],relation:'none',support_state:effectiveAssessmentMode(req)==='verify'?'not_assessable':'missing',reason:'No evidence assessment was returned.',inference_path:[],lifecycle_phases:[],qualifying_instances:[]};
@@ -226,8 +214,10 @@ export function computeDeterministicScore(llmResponse,structuredJd,options={}){
     if(mode==='score' && Number.isFinite(result.credit) && policy && Number.isFinite(policy.credit_cap)) result.credit=Math.min(result.credit,policy.credit_cap);
     const credit=result.credit;
     if(mode==='score'&&weight>0){
-      totalWeight+=weight; earned+=weight*credit; const component=componentForRequirement(req);
-      if(componentAccumulator[component]){componentAccumulator[component].total+=weight;componentAccumulator[component].earned+=weight*credit;}
+      totalWeight+=weight; earned+=weight*credit;
+      const capabilityRow=(dimensionResult?.dimensions||[]).find(d=>d.dimension==='capability');
+      capabilityWeight+=weight; capabilityEarned+=weight*(capabilityRow?.score ?? credit);
+      if ((match.evidence_ids||[]).length || (match.qualifying_instances||[]).length || (dimensionResult?.dimensions||[]).some(d=>(d.evidence_ids||[]).length)) coverageWeight+=weight;
       if(selected){depthWeight+=weight;depthWeighted+=weight*(DEPTH_SCORE[selected.depth]??70);} if(req.priority==='dealbreaker'&&credit<50)hasDealbreaker=true;
     }
     if(result.constraints?.count && result.constraints.count.required!==null){constraintChecks.push({requirement_id:req.id,type:'count',required:result.constraints.count.required,verified:Number(result.constraints.count.verified.toFixed(2)),status:result.constraints.count.verified>=result.constraints.count.required?'met':'below'});}
@@ -259,17 +249,13 @@ export function computeDeterministicScore(llmResponse,structuredJd,options={}){
     row.score_lineage.final_score_points = Number((((row.calculation?.result || 0) * (row.calculation?.priority_weight || 0)) / totalWeight).toFixed(2));
     row.score_lineage.formula = `final contribution = (${row.calculation?.priority_weight || 0} × ${row.calculation?.result || 0}) / ${totalWeight}`;
   }
-  const skills=componentAccumulator.skills.total>0?Math.round(componentAccumulator.skills.earned/componentAccumulator.skills.total):0;
-  const experience=componentAccumulator.experience.total>0?Math.round(componentAccumulator.experience.earned/componentAccumulator.experience.total):0;
+  const coverage=totalWeight>0?Math.round(100*coverageWeight/totalWeight):0;
+  const capability=capabilityWeight>0?Math.round(capabilityEarned/capabilityWeight):0;
   const depth=depthWeight>0?Math.round(depthWeighted/depthWeight):0;
   let verdict='Low evidence';if(finalScore>=80)verdict='Strong fit';else if(finalScore>=65)verdict='Good fit';else if(finalScore>=50)verdict='Potential';else if(finalScore>=35)verdict='Partial fit';
-  const categoryScore = {};
-  if (paths.adaptive) for (const cat of Object.keys(paths.adaptive.categoryWeights)) {
-    const entries=breakdownTable.filter(r => r.intelligence_category===cat && r.assessment_mode==='score' && r.weight_percent>0);
-    const weightSum=entries.reduce((n,r)=>n+(r.calculation?.priority_weight||0),0);
-    categoryScore[cat]=weightSum ? Math.round(entries.reduce((n,r)=>n+(r.calculation?.priority_weight||0)*(r.calculation?.result||0),0)/weightSum) : null;
-  }
-  return {finalScore,verdict,hasDealbreaker,componentBreakdown:{experience,skills,depth},breakdownTable,gateChecks,verificationItems,constraintChecks,
-    adaptiveWeighting:paths.adaptive ? { ...paths.adaptive, selected_pathway:paths.path, pathway_scores:paths.pathwayResults, category_scores:categoryScore } : null,
-    scoringMeta:{scoringVersion:SCORING_VERSION,referenceYear,scoreBearingRequirements:breakdownTable.filter((r)=>r.assessment_mode==='score').length,verificationRequirements:verificationItems.length,gateRequirements:gateChecks.length,constraintChecks:constraintChecks.length}};
+  return {finalScore,verdict,hasDealbreaker,
+    componentBreakdown:{coverage,capability,depth,experience:coverage,skills:capability},
+    breakdownTable,gateChecks,verificationItems,constraintChecks,
+    adaptiveWeighting:paths.adaptive ? { ...paths.adaptive, selected_pathway:paths.path, pathway_scores:paths.pathwayResults, ledger_version:QUALIFICATION_LEDGER_VERSION } : null,
+    scoringMeta:{scoringVersion:SCORING_VERSION,qualificationLedgerVersion:QUALIFICATION_LEDGER_VERSION,referenceYear,scoreBearingRequirements:breakdownTable.filter((r)=>r.assessment_mode==='score').length,verificationRequirements:verificationItems.length,gateRequirements:gateChecks.length,constraintChecks:constraintChecks.length}};
 }

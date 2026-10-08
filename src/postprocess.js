@@ -5,6 +5,7 @@ import { reconcileRelation, conceptSurfaceForms } from './ontology.js';
 import { recoverTextFirstEvidence } from './textEvidenceRecovery.js';
 import { normalizeStructuredJd } from './requirementRules.js';
 import { normalizeJdIntelligence } from './jdIntelligence.js';
+import { qualificationAssessmentMode } from './qualificationLedger.js';
 import { normalizeEvaluationTransport } from './transportNormalize.js';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
@@ -114,7 +115,7 @@ function augmentExplicitEvidence(result, maskedCv) {
   const matches=(result.matches || []).map((match) => {
     if ((match.evidence_ids || []).length > 0 || (match.qualifying_instances || []).length > 0) return match;
     const req=(result.structured_jd?.requirements || []).find((r) => r.id === match.requirement_id);
-    if (!req || ['behavioral','factual_gate'].includes(req.requirement_type)) return match;
+    if (!req || qualificationAssessmentMode(req) !== 'score') return match;
     const targets=[...(req.target_concepts || []), ...(req.alternatives || [])].filter(Boolean);
     for (const target of targets) {
       for (const surface of conceptSurfaceForms(target)) {
@@ -143,7 +144,7 @@ function recoverSharedEvidence(result) {
   const matches=(result.matches||[]).map(match=>{
     if ((match.evidence_ids||[]).length || (match.qualifying_instances||[]).length) return match;
     const req=(result.structured_jd?.requirements||[]).find(r=>r.id===match.requirement_id);
-    if (!req || ['behavioral','factual_gate'].includes(req.requirement_type)) return match;
+    if (!req || qualificationAssessmentMode(req) !== 'score') return match;
     const terms=SHARED_ACTIONS.filter(t=>String(req.text||'').toLowerCase().includes(t));
     if (!terms.length) return match;
     const shared=(result.evidence||[]).filter(e=> e.source_type==='text' &&
@@ -159,10 +160,29 @@ function ensureOneMatchPerRequirement(result) {
   const first=new Map(); for (const m of result.matches || []) if (!first.has(m.requirement_id)) first.set(m.requirement_id,m);
   const matches=(result.structured_jd?.requirements || []).map((req) => first.get(req.id) || ({
     requirement_id:req.id, evidence_ids:[], relation:'none',
-    support_state:req.requirement_type === 'behavioral' ? 'not_assessable' : 'missing',
-    reason:req.requirement_type === 'behavioral' ? 'This behavioural requirement is not reliably established from CV wording alone.' : 'No quote-backed evidence was returned for this requirement.',
+    support_state:qualificationAssessmentMode(req) === 'verify' ? 'not_assessable' : 'missing',
+    reason:qualificationAssessmentMode(req) === 'verify' ? 'This behavioural requirement is not reliably established from CV wording alone.' : 'No quote-backed evidence was returned for this requirement.',
     inference_path:[], lifecycle_phases:[], qualifying_instances:[],
   }));
+  return { ...result, matches };
+}
+
+function reconcileVerifiedSupportState(result) {
+  const evidenceMap=new Map((result.evidence || []).map((e)=>[e.id,e]));
+  const matches=(result.matches || []).map((match)=>{
+    if (match.recovery_only || !(match.evidence_ids || []).length) return match;
+    if (!['missing','unsettled'].includes(match.support_state)) return match;
+    if (!['direct','canonical','equivalent'].includes(match.relation)) return match;
+    const items=(match.evidence_ids || []).map((id)=>evidenceMap.get(id)).filter(Boolean);
+    if (!items.length) return match;
+    const onlySkills=items.every((e)=>e.evidence_context_type === 'skills_inventory');
+    return {
+      ...match,
+      support_state:onlySkills ? 'listed' : 'documented',
+      reason:match.reason || 'Verified direct/equivalent CV evidence establishes this qualification.',
+      support_state_reconciled:true,
+    };
+  });
   return { ...result, matches };
 }
 
@@ -195,5 +215,6 @@ export function validateAndSanitizeModelOutput(raw, maskedCv, cachedJd=null, cvV
   result=augmentExplicitEvidence(result,maskedCv);
   result=recoverSharedEvidence(result);
   result=reconcileWithOntology(result);
+  result=reconcileVerifiedSupportState(result);
   return result;
 }

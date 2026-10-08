@@ -18,7 +18,7 @@ const ACTION_RULES = [
 const OWNERSHIP_STRONG = /\b(?:owned|ownership|responsible\s+for|accountable|led|headed|directed|architected|designed|defined|governed|established|orchestrated|decision[-\s]?making)\b/i;
 const OWNERSHIP_SHARED = /\b(?:co[-\s]?led|collaborat(?:ed|ion)|partnered|jointly|team\s+responsible|contributed)\b/i;
 const OWNERSHIP_WEAK = /\b(?:worked\s+alongside|assisted|supported|participated|exposure\s+to|familiar\s+with)\b/i;
-const SCALE_RE = /\b(\d{2,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?)|(?:multi[-\s]?million(?:[-\s]?(?:euro|dollar|pound))?|€|\$|£)\s?\d*[mk]?|enterprise[-\s]?wide|enterprise|global|multi[-\s]?country|multi[-\s]?region|large[-\s]?scale|international\s+24\/7)\b/ig;
+const SCALE_RE = /\b(\d{2,}(?:,\d{3})*\+?\s*(?:(?:enterprise|global|international)\s+)?(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?)|(?:multi[-\s]?million(?:[-\s]?(?:euro|dollar|pound))?|€|\$|£)\s?\d*[mk]?|enterprise[-\s]?wide|global|multi[-\s]?country|multi[-\s]?region|large[-\s]?scale|international\s+24\/7)\b/ig;
 const COMPLEXITY_RE = /\b(?:multi[-\s]?tenant|hybrid|regulated|mission[-\s]?critical|high[-\s]?availability|disaster\s+recovery|zero[-\s]?downtime|global|enterprise|complex|integration|migration|security|governance)\b/ig;
 
 const ACTION_LEVEL = Object.freeze({

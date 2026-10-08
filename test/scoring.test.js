@@ -75,7 +75,7 @@ test('functional tool substitute receives strong capability credit when exact to
   const e = { ...baseEvidence, quote: 'Designed GitLab CI pipelines for build, test and deployment.', skills: ['GitLab CI'], capabilities: ['CI/CD'], depth: 'owned' };
   const m = match({ relation: 'functional', support_state: 'documented', reason: 'Same CI/CD capability.' });
   const result = computeDeterministicScore({ evidence: [e], matches: [m] }, jd([r]), { referenceYear: 2026 });
-  assert.equal(result.finalScore, 88);
+  assert.ok(result.finalScore >= 90, `functional equivalent should receive strong credit when exact tool is not required: ${result.finalScore}`);
 });
 
 test('exact-required tools cap substitutes even if functionally related', () => {

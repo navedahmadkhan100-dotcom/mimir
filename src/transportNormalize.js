@@ -44,10 +44,15 @@ function nullableNumber(value) {
 // requirements, importance, ownership, scale, or weights.
 export function normalizeJdTransport(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
-  // Accept the authoritative shape too, so schema-free fallback can return it directly.
-  if (source.intelligence && Array.isArray(source.requirements)) return source;
-
-  const dims = arrayOf(source.evaluation_dimensions);
+  const intelligence = source.intelligence && typeof source.intelligence === 'object' ? source.intelligence : {};
+  // Always normalize provider output, even when Gemini happened to emit Mimir's
+  // authoritative nested shape. Schema-free transport must never rely on every
+  // optional/default field being present or perfectly enumerated by the model.
+  const dims = arrayOf(source.evaluation_dimensions).length
+    ? arrayOf(source.evaluation_dimensions)
+    : arrayOf(source.requirements).flatMap((item) =>
+        arrayOf(item?.evaluation_dimensions).map((d) => ({ ...d, requirement_id:item?.id }))
+      );
   const requirements = arrayOf(source.requirements).map((item, index) => {
     const r = item && typeof item === 'object' ? item : {};
     const requirementId = String(r.id || `R${index + 1}`);
@@ -99,11 +104,13 @@ export function normalizeJdTransport(raw) {
     role_title:String(source.role_title || ''),
     role_summary:String(source.role_summary || ''),
     intelligence:{
-      role_intent:String(source.role_intent || source.role_summary || ''),
-      role_family:String(source.role_family || 'unspecified'),
-      role_focus:String(source.role_focus || ''),
-      ambiguities:arrayOf(source.ambiguities).map(String).slice(0,8),
-      pathways:arrayOf(source.pathways).map((p) => ({
+      role_intent:String(source.role_intent || intelligence.role_intent || source.role_summary || ''),
+      role_family:String(source.role_family || intelligence.role_family || 'unspecified'),
+      role_focus:String(source.role_focus || intelligence.role_focus || ''),
+      ambiguities:arrayOf(source.ambiguities).length
+        ? arrayOf(source.ambiguities).map(String).slice(0,8)
+        : arrayOf(intelligence.ambiguities).map(String).slice(0,8),
+      pathways:(arrayOf(source.pathways).length ? arrayOf(source.pathways) : arrayOf(intelligence.pathways)).map((p) => ({
         id:String(p?.id || ''), label:String(p?.label || ''), explanation:String(p?.explanation || ''),
       })).filter((p) => p.id).slice(0,4),
     },
@@ -120,7 +127,9 @@ export function normalizeEvaluationTransport(raw) {
     const e = item && typeof item === 'object' ? item : {};
     const inferredSource = e.visual_asset_id || e.visual_observation ? 'visual' : 'text';
     return {
-      ...e,
+      // Intentionally rebuild the allowed evidence shape instead of spreading
+      // provider fields. Schema-free transport may add commentary keys; those
+      // must never create a local AJV failure.
       id: String(e.id || `E${index + 1}`),
       source_type: enumOr(e.source_type, SOURCE_TYPES, inferredSource),
       quote: String(e.quote || ''),

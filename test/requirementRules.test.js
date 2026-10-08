@@ -17,3 +17,16 @@ test('deterministically compiles count, SaaS, E2E and role context from JD wordi
   assert.equal(r.lifecycle_scope,'end_to_end');
   assert.match(r.required_role_context[0],/Program Manager/i);
 });
+
+
+test('concrete stakeholder collaboration remains score-bearing responsibility', () => {
+  const r=normalizeRequirementSemantics({
+    ...base,
+    text:'Collaborate with product, data, and IT stakeholders',
+    category:'behavioral',
+    responsibility_level:'unspecified',
+  });
+  assert.equal(r.category,'responsibility');
+  assert.equal(r.requirement_type,'capability');
+  assert.equal(r.responsibility_level,'coordinate');
+});

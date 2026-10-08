@@ -1,44 +1,58 @@
-# Mimir Brain — Dimension Evidence Architecture
+# Mimir Brain — Qualification Ledger Architecture
 
-The public product label remains **Mimir v1.0**. Internally, the JD/evidence intelligence policy uses versioned 5.0 modules so scoring behavior can be audited independently from UI releases.
+> Repository filename retained for compatibility. This document describes the current v1.0 product brain.
 
-## Core pipeline
+## Core principle
 
-1. **JD Intelligence** — identify role intent, atomic capabilities, importance, AND/OR logic, candidate pathways, responsibility level and only the dimensions actually required by the JD.
-2. **Evidence extraction** — extract verbatim CV evidence with provenance, project/role context, source type, actions, scale, recency and lifecycle signals.
-3. **Capability cross-linking** — a verified CV quote may support more than one relevant requirement. Evidence is not trapped under the first requirement that cited it.
-4. **Dimension entailment** — capability, responsibility, context, scale, exactness, lifecycle, duration, count and recency are evaluated independently.
-5. **Deterministic scoring** — JavaScript combines dimension support using fixed importance multipliers and applies hard caps only to genuinely critical missing dimensions.
-6. **Bidirectional Odin** — challenges both unsupported positive claims and false negatives where verified evidence was overlooked.
-7. **Human governance** — ambiguous facts and behavioral/eligibility conditions remain verification items; Mimir does not auto-reject.
+Gemini performs semantic extraction and evidence matching. Deterministic JavaScript owns qualification weights, evidence boundaries, dimensions, policy caps and the final numerical score.
 
-## Why dimensions matter
+## JD flow
 
-A sentence such as “own end-to-end implementation” is not one binary keyword match. It contains at least capability, responsibility and lifecycle dimensions. A candidate can prove implementation capability but not ownership, or ownership but only part of the lifecycle. Mimir scores those differences explicitly.
+`Masked JD -> compact Gemini qualification extraction -> local transport normalization -> deterministic semantic normalization -> Qualification Ledger -> cached frozen JD`
+
+Broad technical / functional / operational categories may exist as descriptive metadata for backward compatibility, but they have **zero authority over scoring**.
+
+Score-bearing qualifications are directly weighted by priority, importance and explicit P1/P2/P3 tier. Rephrased qualifications sharing the same capability group receive one group budget, preventing repetition from inflating the score.
+
+Eligibility constraints are gates. Generic behavioural traits are verification items. Concrete stakeholder delivery responsibilities remain CV-assessable qualifications.
+
+## CV flow
+
+`Masked CV + frozen JD -> compact Gemini evidence extraction -> local quote/provenance verification -> text-first evidence recovery -> evidence semantics -> dimension scoring -> Odin -> deterministic final score`
+
+The provider does not receive Mimir's deep authoritative schemas. Schema-free JSON is normalized and AJV-validated locally.
+
+## Dimensions
+
+Mimir activates only dimensions justified by the JD:
+
+- capability
+- responsibility
+- context
+- scale
+- exactness
+- lifecycle
+- duration
+- count
+- recency
+
+The word `enterprise` alone does not activate scale. Scale needs explicit magnitude such as enterprise-wide/global/large-scale/multi-country/numeric scope.
 
 ## Evidence authority
 
-Mimir distinguishes evidence context. Role/project evidence and employment references can carry full responsibility authority. Professional summaries are useful but weaker if uncorroborated. Skills inventories can establish that a technology is listed but cannot independently prove architecture ownership. Visual evidence can support documented exposure but cannot prove authorship on its own.
+Role/project and employment-reference evidence can establish responsibility at full authority. Professional summaries may corroborate. Skills inventories cannot independently prove ownership. Visual-only evidence cannot prove candidate authorship/ownership.
 
-## Important safety rules
+## Odin
 
-- No numeric score comes from Gemini.
-- No arbitrary company-prestige or title-prestige bonus.
-- Generic reliability, punctuality and attention-to-detail claims do not create zero-score CV penalties.
-- Missing CV evidence means “not established from this CV”, not “candidate definitely cannot do it”.
-- Explicit mandatory skills, exact credentials, counts, durations and lifecycle conditions remain strict when the JD truly requires them.
-- Multiple bullets from one role do not multiply the duration of that role.
-- “Recent” experience is assessed only when the JD explicitly asks for recency.
+Odin is a consistency auditor, not a second scoring model. It looks for over-claims and false negatives, including cases where Mimir says ownership is missing while another verified CV quote explicitly proves ownership.
 
-## Permanent regression cases
+## Transport resilience
 
-The automated test suite contains cases based on real failure patterns observed during Mimir development:
+Primary path: Interactions JSON MIME, no provider schema.
 
-- **Marco** — direct AI architecture ownership must not be lost between evidence extraction and scoring; related ownership evidence can corroborate multiple architecture requirements.
-- **Jose** — UAT oversight must not be treated as proof of scenario authoring/prioritization/country review, while explicit cutover oversight must not be classified as no evidence.
-- **Robotics** — reliability/punctuality remain interview/reference verification rather than score dilution.
-- Skills-list-only ownership, duplicated-duration inflation and stale “recent” experience are also protected by regression tests.
+Fallbacks on provider-format/transient errors:
 
-## Validation status
+1. GenerateContent JSON MIME, no provider schema.
+2. GenerateContent plain JSON prompt, no provider schema.
 
-Automated tests validate deterministic logic and integration contracts. They do not prove that a live LLM will extract every CV/JD perfectly. Production quality should be measured on a recruiter-reviewed benchmark at requirement/dimension level, not only by comparing final scores.
+All responses are normalized locally. Unknown provider keys are stripped before AJV validation. Known provider calls have bounded attempt timeouts so a broken first route cannot consume the entire request deadline.

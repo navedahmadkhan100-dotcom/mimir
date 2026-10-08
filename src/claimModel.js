@@ -13,7 +13,7 @@ const ACTION_PATTERNS = [
   ['consult', /\b(?:consult(?:ed|ing|ant)?|advis(?:e|ed|ing|ory))\b/i],
 ];
 
-const SCALE_RE = /\b(?:enterprise|global|multi[-\s]?country|multi[-\s]?region|large[-\s]?scale|\d{3,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|tenants?|applications?|workloads?))\b/i;
+const SCALE_RE = /\b(?:enterprise[-\s]?wide|organisation[-\s]?wide|organization[-\s]?wide|global(?:ly)?|multi[-\s]?(?:country|region|site|tenant)|large[-\s]?scale|at\s+scale|across\s+\d+\s+(?:countries|regions|sites|tenants)|\d{2,}(?:,\d{3})*\+?\s*(?:(?:enterprise|global|international)\s+)?(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?))\b/i;
 const OWNERSHIP_RE = /\b(?:owned|ownership|responsible\s+for|accountable|led|lead|headed|architected|designed|decision[-\s]?making)\b/i;
 
 function uniq(values = []) { return [...new Set(values.filter(Boolean))]; }
@@ -43,9 +43,11 @@ export function buildClaimModel(structuredJd = {}) {
   const claims = (structuredJd.requirements || []).map((req) => {
     const text = String(req.text || '');
     const requiredActions = inferRequiredActions(text);
-    const evalDims=new Map((req.evaluation_dimensions||[]).map(d=>[d.dimension,d]));
-    const ownershipRequired = ['own','lead'].includes(req.responsibility_level) || Boolean(evalDims.get('responsibility')?.critical) || OWNERSHIP_RE.test(text) || requiredActions.some((a) => ['architect','design','lead'].includes(a));
-    const scaleRequired = Boolean(evalDims.get('scale')) || SCALE_RE.test(text);
+    // Qualification Ledger: the model may annotate dimensions, but it cannot
+    // invent ownership or scale requirements. Those are activated only by the
+    // JD wording / normalized responsibility level.
+    const ownershipRequired = ['own','lead'].includes(req.responsibility_level) || OWNERSHIP_RE.test(text) || requiredActions.some((a) => ['architect','design','lead'].includes(a));
+    const scaleRequired = SCALE_RE.test(text);
     const dimensions = {
       technology: (req.target_concepts || []).length > 0 || (req.alternatives || []).length > 0,
       duration: Number(req.minimum_years) > 0,

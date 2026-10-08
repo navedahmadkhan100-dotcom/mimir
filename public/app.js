@@ -12,7 +12,7 @@ function apiUrl(path) {
 const $ = (id) => document.getElementById(id);
 const SAVED_JD_STORAGE_VERSION = 'mimir-v2.0.0'; // Preserve the user's existing browser JD vault.
 const ENGINE_CACHE_VERSION = 'mimir-v5.1.0-evidence-stable';
-const JD_PROFILE_VERSION = '5.1.0-evidence-stable-jd-intelligence';
+const JD_PROFILE_VERSION = '6.0.0-qualification-ledger-jd-intelligence';
 const STORAGE = {
   savedJds: `${SAVED_JD_STORAGE_VERSION}:saved-jds`,
   jdStructures: `${ENGINE_CACHE_VERSION}:jd-structures`,
@@ -822,21 +822,21 @@ function renderJdIntelligence(profile, target='jdIntelligencePreview', scoring=n
   const root=$(target);
   if (!root) return;
   if (!profile) { root.classList.add('hidden');root.innerHTML='';return; }
-  const categoryLabels={technical:'Technical',functional_domain:'Functional / Domain',operational_delivery:'Operational / Delivery',behavioral:'Behavioral',eligibility:'Eligibility'};
-  const weights=scoring?.categoryWeights || profile.category_weights || {};
-  const bars=Object.entries(categoryLabels).filter(([id])=>Number(weights[id]||0)>0).map(([id,label])=>{
-    const v=Math.max(0,Math.min(100,Number(weights[id]||0)));
-    return `<div class="jdi-bar-row"><span>${escapeHtml(label)}</span><div class="jdi-track"><i class="jdi-fill jdi-${escapeHtml(id)}" style="width:${v.toFixed(2)}%"></i></div><strong>${v.toFixed(1)}%</strong></div>`;
-  }).join('');
+  const emphasis=(scoring?.roleEmphasis || profile.role_emphasis || []).slice(0,8);
+  const emphasisHtml=emphasis.length
+    ? emphasis.map(x=>`<span class="jdi-path">${escapeHtml(x)}</span>`).join('')
+    : '<span>No scored qualifications extracted.</span>';
   const capabilities=(profile.requirements||[]).filter(x=>x.assessment_mode!=='exclude').slice(0,45);
   const rows=capabilities.map((r)=>{
-    const weight = scoring?.weightsByRequirement ? scoring.weightsByRequirement[r.id] : r.weight_percent;
-    return `<div class="jdi-cap"><span class="jdi-cap-id">${escapeHtml(r.id)}</span><div><strong>${escapeHtml(r.capability)}</strong><small>${escapeHtml(categoryLabels[r.category]||humanize(r.category))} · ${escapeHtml(r.importance)} ${r.tier!=='none'?`· ${escapeHtml(r.tier)}`:''} · ${escapeHtml(r.responsibility_level)}</small></div><b>${r.assessment_mode==='score'?`${Number(weight||0).toFixed(1)}%`:escapeHtml(humanize(r.assessment_mode))}</b></div>`;
+    const weight=scoring?.weightsByRequirement ? scoring.weightsByRequirement[r.id] : r.weight_percent;
+    const mode=r.assessment_mode==='score' ? `${Number(weight||0).toFixed(1)}%` : humanize(r.assessment_mode);
+    const responsibility=r.responsibility_level && r.responsibility_level!=='unspecified' ? ` · ${escapeHtml(r.responsibility_level)}` : '';
+    return `<div class="jdi-cap"><span class="jdi-cap-id">${escapeHtml(r.id)}</span><div><strong>${escapeHtml(r.capability)}</strong><small>${escapeHtml(r.importance)}${r.tier!=='none'?` · ${escapeHtml(r.tier)}`:''}${responsibility}</small></div><b>${escapeHtml(mode)}</b></div>`;
   }).join('');
   const route=scoring?.selected_pathway;
   const pathways=(profile.pathways||[]).map(p=>`<span class="jdi-path">${escapeHtml(p.label)}${route===p.id?' · selected':''}</span>`).join('');
   const ambiguities=(profile.ambiguities||[]).slice(0,8).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
-  root.innerHTML=`<div class="jdi-top"><div class="section-kicker gradient-text">ROLE INTENT · JD FIRST</div><strong>${escapeHtml(profile.role_intent || 'Role intelligence')}</strong><p>${escapeHtml(profile.role_focus || 'Weights are inferred from the client JD and are open to recruiter review.')}</p></div><div class="jdi-bars">${bars||'<span>No scored capabilities extracted.</span>'}</div>${pathways?`<div class="jdi-pathways">Valid sourcing pathways: ${pathways}</div>`:''}<details class="jdi-details"><summary>Inspect ${capabilities.length} capabilities and their importance</summary><div class="jdi-capabilities">${rows}</div></details>${ambiguities?`<details class="jdi-details"><summary>${(profile.ambiguities||[]).length} JD clarification flags</summary><ul>${ambiguities}</ul></details>`:''}<p class="jdi-note">Derived importance, not employer-provided percentages. Generic traits and unverified eligibility do not receive unexplained zero scores.</p>`;
+  root.innerHTML=`<div class="jdi-top"><div class="section-kicker gradient-text">ROLE INTENT · QUALIFICATION LEDGER</div><strong>${escapeHtml(profile.role_intent || 'Role intelligence')}</strong><p>${escapeHtml(profile.role_focus || 'Each qualification is weighted directly from the JD. Broad technical/functional/operational percentages do not control the score.')}</p></div><div class="jdi-pathways"><strong>Role emphasis:</strong> ${emphasisHtml}</div>${pathways?`<div class="jdi-pathways">Valid sourcing pathways: ${pathways}</div>`:''}<details class="jdi-details"><summary>Inspect ${capabilities.length} qualifications and their score share</summary><div class="jdi-capabilities">${rows}</div></details>${ambiguities?`<details class="jdi-details"><summary>${(profile.ambiguities||[]).length} JD clarification flags</summary><ul>${ambiguities}</ul></details>`:''}<p class="jdi-note">Qualification weights are inferred from the JD and de-duplicated by capability. Behavioral verification and eligibility gates do not silently dilute the CV score.</p>`;
   root.classList.remove('hidden');
   if (target === 'jdIntelligencePreview') {
     const panel = $('jdIntelligencePanel');

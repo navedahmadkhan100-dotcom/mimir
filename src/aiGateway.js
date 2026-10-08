@@ -1,6 +1,6 @@
 import { GeminiExtractor, MODEL_ID as GEMINI_MODEL_ID } from './gemini.js';
 
-export const AI_GATEWAY_VERSION = '5.3.0-jd-and-cv-transport-safe';
+export const AI_GATEWAY_VERSION = '6.0.0-schema-free-resilient-transport';
 
 export class AITimeoutError extends Error {
   constructor(stage, durationMs) {

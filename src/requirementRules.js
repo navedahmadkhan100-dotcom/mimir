@@ -7,6 +7,7 @@ const MANDATORY_RE = /\b(?:mandatory|must\s+have|required|essential|no\s+substit
 const METHODOLOGY_RE = /\b(?:methodology|framework)\b/i;
 const ROLE_CONTEXT_RE = /\bas\s+(?:an?\s+)?([A-Za-z][A-Za-z /&-]{2,60}?(?:manager|architect|lead|consultant|engineer|developer|analyst|director|owner))\b/i;
 const CLEARANCE_RE = /\b(?:sc\s+clear(?:ed|ance)|dv\s+clear(?:ed|ance)|bpss|ctc\s+clear(?:ed|ance)|developed\s+vetting|security\s+clearance|nato\s+(?:secret|confidential)|ukic\s+clearance)\b/i;
+const STAKEHOLDER_RESP_RE = /\b(?:collaborat(?:e|ed|ing)\s+with|partner(?:ed|ing)?\s+with|liais(?:e|ed|ing)\s+with|work(?:ed|ing)?\s+closely\s+with|stakeholder\s+management|manage(?:d|ment)?\s+(?:key\s+)?stakeholders?)\b/i;
 const FACTUAL_GATE_RE = /\b(?:right\s+to\s+work|work\s+authori[sz]ation|visa\s+(?:status|requirement)|sponsorship|must\s+be\s+based|must\s+reside|relocation\s+required)\b/i;
 
 function inferCountUnit(text) {
@@ -43,6 +44,13 @@ export function normalizeRequirementSemantics(input) {
   } else if (req.category === 'certification' || CERT_RE.test(text)) {
     req.requirement_type = 'credential';
     req.exact_credential = req.exact_credential || (req.target_concepts || []).join(' / ');
+  } else if (req.category === 'behavioral' && STAKEHOLDER_RESP_RE.test(text)) {
+    // A concrete cross-functional stakeholder responsibility is CV-assessable;
+    // do not demote it to a generic soft-skill verification item just because
+    // the provider labelled it behavioural.
+    req.category = 'responsibility';
+    req.requirement_type = 'capability';
+    if (!req.responsibility_level || req.responsibility_level === 'unspecified') req.responsibility_level = 'coordinate';
   } else if (req.category === 'behavioral') {
     req.requirement_type = 'behavioral';
   } else if (req.category === 'methodology' || METHODOLOGY_RE.test(text)) {

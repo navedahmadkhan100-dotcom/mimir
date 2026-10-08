@@ -36,3 +36,14 @@ test('transport normalizer defaults malformed enum values conservatively', () =>
   assert.equal(out.matches[0].relation, 'none');
   assert.equal(out.matches[0].support_state, 'missing');
 });
+
+test('schema-free normalization strips unexpected provider keys instead of failing local validation', () => {
+  const out = normalizeEvaluationTransport({
+    evidence:[{id:'E1',quote:'Designed AI architecture.',source_type:'text',depth:'owned',model_comment:'extra'}],
+    matches:[{requirement_id:'R1',evidence_ids:['E1'],relation:'direct',support_state:'documented',reason:'direct',unexpected:true}],
+    extra_top_level:'ignored',
+  });
+  assert.equal(Object.hasOwn(out.evidence[0],'model_comment'),false);
+  assert.equal(Object.hasOwn(out.matches[0],'unexpected'),false);
+  assert.deepEqual(Object.keys(out).sort(),['evidence','matches']);
+});

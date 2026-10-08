@@ -5,7 +5,7 @@ const STATE_RANK = Object.freeze({
   contradicted:0, not_evidenced:1, ambiguous:2, contextual:3, partially_supported:4, supported:5, not_assessable:2,
 });
 const OWNERSHIP_RE = /\b(?:architect(?:ed|ure)?|design(?:ed|ing)?|led|leadership|owned|ownership|responsible\s+for|strategy|strategic)\b/i;
-const SCALE_RE = /\b(?:enterprise|global|multi[-\s]?country|large[-\s]?scale|\d{3,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?))\b/i;
+const SCALE_RE = /\b(?:enterprise[-\s]?wide|organisation[-\s]?wide|organization[-\s]?wide|global(?:ly)?|multi[-\s]?(?:country|region|site|tenant)|large[-\s]?scale|at\s+scale|across\s+\d+\s+(?:countries|regions|sites|tenants)|\d{2,}[,+]?\s*(?:users?|devices?|endpoints?|servers?|sites?|employees?|fte|tenants?|applications?|workloads?|countries?|regions?|teams?))\b/i;
 
 function baseState(match = {}) {
   if (match.support_state === 'contradicted') return 'contradicted';
