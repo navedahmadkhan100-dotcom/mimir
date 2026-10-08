@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
-import { jdIntelligenceGenerationSchema, providerSafeEvaluationSchema } from './schemas.js';
+import { providerSafeJdSchema, providerSafeEvaluationSchema } from './schemas.js';
 import { JD_SYSTEM_INSTRUCTION, EVALUATION_SYSTEM_INSTRUCTION } from './prompt.js';
+import { normalizeJdTransport } from './transportNormalize.js';
 
 export const MODEL_ID = 'gemini-3.5-flash-lite';
 
@@ -55,10 +56,12 @@ export class GeminiExtractor {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  // JD compilation remains on Interactions structured output because the JD
-  // schema is smaller and proven to be accepted. Candidate evaluation uses a
-  // different transport below so Google's schema parser never sees Mimir's
-  // much deeper evidence graph schema.
+  // JD compilation uses the same transport-safety principle as CV evaluation:
+  // Gemini never sees Mimir's deep authoritative JD schema.  The primary
+  // Interactions request uses a flatter schema, then Mimir reconstructs and
+  // validates the full JD contract locally.  If Google's schema parser rejects
+  // even the flat schema, we fall back to JSON MIME and finally schema-free
+  // Interactions without changing the semantic prompt.
   async structureJd(prompt, visualAssets = []) {
     const input = [{ type: 'text', text: prompt }];
     for (const asset of visualAssets) {
@@ -70,28 +73,79 @@ export class GeminiExtractor {
       });
     }
 
-    const interaction = await this.client.interactions.create({
-      model: MODEL_ID,
-      store: false,
-      system_instruction: JD_SYSTEM_INSTRUCTION,
-      input,
-      response_format: {
-        type: 'text',
-        mime_type: 'application/json',
-        schema: jdIntelligenceGenerationSchema,
-      },
-      generation_config: {
-        max_output_tokens: 9000,
-      },
-    });
+    try {
+      const interaction = await this.client.interactions.create({
+        model: MODEL_ID,
+        store: false,
+        system_instruction: JD_SYSTEM_INSTRUCTION,
+        input,
+        response_format: [{
+          type: 'text',
+          mime_type: 'application/json',
+          schema: providerSafeJdSchema,
+        }],
+        generation_config: {
+          max_output_tokens: 9000,
+        },
+      });
+      return {
+        json: normalizeJdTransport(parseJsonText(interaction.output_text, 'JD structure')),
+        usage: interaction.usage || null,
+        interactionId: interaction.id || null,
+        model: interaction.model || MODEL_ID,
+        transport: 'interactions-flat-jd-local-ajv',
+      };
+    } catch (structuredError) {
+      if (!invalidArgument(structuredError)) throw structuredError;
+      console.warn('[Mimir AI] Flat structured JD transport rejected; switching to JSON MIME transport.');
+    }
 
-    return {
-      json: parseJsonText(interaction.output_text, 'JD structure'),
-      usage: interaction.usage || null,
-      interactionId: interaction.id || null,
-      model: interaction.model || MODEL_ID,
-      transport: 'interactions-structured',
-    };
+    const contents = [{ text: prompt }];
+    for (const asset of visualAssets) {
+      contents.push({ text: visualAssetContext(asset) });
+      contents.push({
+        inlineData: {
+          mimeType: asset.mimeType || 'image/jpeg',
+          data: asset.buffer.toString('base64'),
+        },
+      });
+    }
+
+    try {
+      const response = await this.client.models.generateContent({
+        model: MODEL_ID,
+        contents,
+        config: {
+          systemInstruction: JD_SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 9000,
+        },
+      });
+      return {
+        json: normalizeJdTransport(parseJsonText(response.text, 'JD structure')),
+        usage: response.usageMetadata || null,
+        interactionId: null,
+        model: MODEL_ID,
+        transport: 'generateContent-jd-json-local-ajv-fallback',
+      };
+    } catch (error) {
+      if (!invalidArgument(error)) throw error;
+      console.warn('[Mimir AI] JSON MIME JD transport rejected; switching to schema-free Interactions fallback.');
+      const interaction = await this.client.interactions.create({
+        model: MODEL_ID,
+        store: false,
+        system_instruction: JD_SYSTEM_INSTRUCTION,
+        input,
+        generation_config: { max_output_tokens: 9000 },
+      });
+      return {
+        json: normalizeJdTransport(parseJsonText(interaction.output_text, 'JD structure')),
+        usage: interaction.usage || null,
+        interactionId: interaction.id || null,
+        model: interaction.model || MODEL_ID,
+        transport: 'interactions-jd-prompt-json-local-ajv-fallback',
+      };
+    }
   }
 
   async evaluate(prompt, visualAssets = []) {

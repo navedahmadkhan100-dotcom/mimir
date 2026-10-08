@@ -295,3 +295,80 @@ jdIntelligenceGenerationSchema.properties.requirements.items.required = [
   'explicit_tier', 'capability_group', 'responsibility_level',
   'evidence_equivalents', 'partial_evidence', 'non_equivalents', 'pathway_ids', 'evaluation_dimensions',
 ];
+
+
+// Provider-safe JD transport schema.
+// The authoritative JD contract remains structuredJdSchema and is validated locally.
+// This schema intentionally avoids nesting evaluation_dimensions inside each requirement;
+// Gemini returns them as one flat array keyed by requirement_id, then Mimir reconstructs
+// the authoritative structure before any weighting/scoring logic runs.
+export const providerSafeJdSchema = {
+  type:'object',
+  properties:{
+    role_title:{type:'string'},
+    role_summary:{type:'string'},
+    role_intent:{type:'string'},
+    role_family:{type:'string'},
+    role_focus:{type:'string'},
+    ambiguities:{type:'array',items:{type:'string'},maxItems:8},
+    pathways:{type:'array',maxItems:4,items:{
+      type:'object',additionalProperties:false,
+      properties:{id:{type:'string'},label:{type:'string'},explanation:{type:'string'}},
+      required:['id','label','explanation'],
+    }},
+    requirements:{type:'array',maxItems:24,items:{
+      type:'object',additionalProperties:false,
+      properties:{
+        id:{type:'string'},text:{type:'string'},
+        category:{type:'string',enum:CATEGORY_ENUM},
+        priority:{type:'string',enum:PRIORITY_ENUM},
+        priority_basis:{type:'string'},
+        assessment_hint:{type:'string',enum:ASSESSMENT_HINT_ENUM},
+        strictness:{type:'string',enum:STRICTNESS_ENUM},
+        requirement_logic:{type:'string',enum:LOGIC_ENUM},
+        requirement_type:{type:'string',enum:REQUIREMENT_TYPE_ENUM},
+        target_concepts:{type:'array',items:{type:'string'},maxItems:8},
+        alternatives:{type:'array',items:{type:'string'},maxItems:8},
+        minimum_years:{type:['number','null']},
+        minimum_count:{type:['integer','null']},
+        count_unit:{type:'string'},
+        required_role_context:{type:'array',items:{type:'string'},maxItems:4},
+        lifecycle_scope:{type:'string',enum:LIFECYCLE_SCOPE_ENUM},
+        deployment_model:{type:'string',enum:DEPLOYMENT_MODEL_ENUM},
+        exact_credential:{type:'string'},
+        version_constraint:{type:'string'},
+        capability_name:{type:'string'},
+        intelligence_category:{type:'string',enum:['technical','functional_domain','operational_delivery','behavioral','eligibility']},
+        importance:{type:'string',enum:['decisive','high','medium','supporting','optional']},
+        importance_reason:{type:'string'},
+        explicit_tier:{type:'string',enum:['P1','P2','P3','none']},
+        capability_group:{type:'string'},
+        responsibility_level:{type:'string',enum:['own','lead','execute','coordinate','support','knowledge','unspecified']},
+        evidence_equivalents:{type:'array',items:{type:'string'},maxItems:4},
+        partial_evidence:{type:'array',items:{type:'string'},maxItems:3},
+        non_equivalents:{type:'array',items:{type:'string'},maxItems:3},
+        pathway_ids:{type:'array',items:{type:'string'},maxItems:4},
+      },
+      required:[
+        'id','text','category','priority','priority_basis','assessment_hint','strictness','requirement_logic',
+        'requirement_type','target_concepts','alternatives','minimum_years','minimum_count','count_unit',
+        'required_role_context','lifecycle_scope','deployment_model','exact_credential','version_constraint',
+        'capability_name','intelligence_category','importance','importance_reason','explicit_tier',
+        'capability_group','responsibility_level','evidence_equivalents','partial_evidence','non_equivalents','pathway_ids'
+      ],
+    }},
+    evaluation_dimensions:{type:'array',maxItems:144,items:{
+      type:'object',additionalProperties:false,
+      properties:{
+        requirement_id:{type:'string'},
+        dimension:{type:'string',enum:DIMENSION_ENUM},
+        importance:{type:'string',enum:DIMENSION_IMPORTANCE_ENUM},
+        critical:{type:'boolean'},
+        description:{type:'string'},
+      },
+      required:['requirement_id','dimension','importance','critical','description'],
+    }},
+  },
+  required:['role_title','role_summary','role_intent','role_family','role_focus','ambiguities','pathways','requirements','evaluation_dimensions'],
+  additionalProperties:false,
+};

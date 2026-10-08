@@ -248,7 +248,7 @@ export function createMimirApp(options = {}) {
       const jdAudit=auditStructuredJd(structuredJd);
       return res.json({ jdHash, structuredJd, jdIntelligence:jdIntelligenceSummary(structuredJd,effectiveAssessmentMode), jdAudit,
         analysisMeta:{ model:MODEL_ID, promptVersion:JD_STRUCTURE_PROMPT_VERSION, intelligenceVersion:JD_INTELLIGENCE_VERSION,
-          usage:run.usage || null, interactionId:run.interactionId || null, candidateDataSent:false, visualAssetsPrepared:assets.length, visualAssetsSent:modelAssets.length } });
+          usage:run.usage || null, interactionId:run.interactionId || null, transport:run.transport || 'unknown', candidateDataSent:false, visualAssetsPrepared:assets.length, visualAssetsSent:modelAssets.length } });
     } catch (error) {
       console.error('[Mimir JD intelligence error]',error?.stack || error?.message || error);
       const message=error?.message || 'JD Intelligence analysis failed.';
@@ -370,6 +370,8 @@ export function createMimirApp(options = {}) {
         scoringReferenceYear: REFERENCE_YEAR,
         generatedAt: new Date().toISOString(),
         aiProvider: llm.provider || 'gemini',
+        aiTransport: llm.transport || 'unknown',
+        jdStructureTransport: jdStructureRun?.transport || (cachedStructuredJd ? 'browser-cached-structured-jd' : 'unknown'),
         geminiInteractionId: llm.interactionId,
         jdStructureInteractionId: jdStructureRun?.interactionId || null,
         usage: { jdStructure: jdStructureRun?.usage || null, evaluation: llm.usage || null },

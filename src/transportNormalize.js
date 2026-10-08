@@ -20,6 +20,97 @@ function arrayOf(value) { return Array.isArray(value) ? value : []; }
 function nullableInteger(value) { return Number.isInteger(value) ? value : null; }
 function enumOr(value, allowed, fallback) { return allowed.has(value) ? value : fallback; }
 
+
+
+const JD_CATEGORIES = new Set(['skill','experience','depth','certification','education','language','domain','location','work_authorization','behavioral','responsibility','methodology','other']);
+const JD_PRIORITIES = new Set(['dealbreaker','critical','required','standard','nice_to_have']);
+const JD_STRICTNESS = new Set(['exact_required','equivalent_allowed','functional_allowed','transferable_allowed','not_applicable']);
+const JD_LOGIC = new Set(['single','any_of','all_of']);
+const JD_HINTS = new Set(['score','gate','verify','exclude']);
+const JD_TYPES = new Set(['capability','exact_technology','preferred_technology','counted_experience','minimum_duration','credential','lifecycle','role_context','methodology','factual_gate','behavioral','compound']);
+const JD_LIFECYCLE = new Set(['not_applicable','partial','end_to_end']);
+const JD_INTEL_CATEGORIES = new Set(['technical','functional_domain','operational_delivery','behavioral','eligibility']);
+const JD_IMPORTANCE = new Set(['decisive','high','medium','supporting','optional']);
+const JD_TIERS = new Set(['P1','P2','P3','none']);
+const JD_RESPONSIBILITY = new Set(['own','lead','execute','coordinate','support','knowledge','unspecified']);
+const JD_DIM_IMPORTANCE = new Set(['decisive','high','medium','supporting']);
+
+function nullableNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+// Reconstructs Mimir's authoritative nested JD from the flatter provider-safe
+// transport contract. This function is structural only: it does not invent
+// requirements, importance, ownership, scale, or weights.
+export function normalizeJdTransport(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  // Accept the authoritative shape too, so schema-free fallback can return it directly.
+  if (source.intelligence && Array.isArray(source.requirements)) return source;
+
+  const dims = arrayOf(source.evaluation_dimensions);
+  const requirements = arrayOf(source.requirements).map((item, index) => {
+    const r = item && typeof item === 'object' ? item : {};
+    const requirementId = String(r.id || `R${index + 1}`);
+    const evaluation_dimensions = dims
+      .filter((d) => String(d?.requirement_id || '') === requirementId && DIMENSIONS.has(d?.dimension))
+      .map((d) => ({
+        dimension:d.dimension,
+        importance:enumOr(d.importance, JD_DIM_IMPORTANCE, 'medium'),
+        critical:Boolean(d.critical),
+        description:String(d.description || ''),
+      }))
+      .slice(0,9);
+    return {
+      id:requirementId,
+      text:String(r.text || ''),
+      category:enumOr(r.category, JD_CATEGORIES, 'other'),
+      priority:enumOr(r.priority, JD_PRIORITIES, 'standard'),
+      priority_basis:String(r.priority_basis || ''),
+      assessment_hint:enumOr(r.assessment_hint, JD_HINTS, 'score'),
+      strictness:enumOr(r.strictness, JD_STRICTNESS, 'equivalent_allowed'),
+      requirement_logic:enumOr(r.requirement_logic, JD_LOGIC, 'single'),
+      requirement_type:enumOr(r.requirement_type, JD_TYPES, 'capability'),
+      target_concepts:arrayOf(r.target_concepts).map(String).slice(0,8),
+      alternatives:arrayOf(r.alternatives).map(String).slice(0,8),
+      minimum_years:nullableNumber(r.minimum_years),
+      minimum_count:nullableInteger(r.minimum_count),
+      count_unit:String(r.count_unit || ''),
+      required_role_context:arrayOf(r.required_role_context).map(String).slice(0,4),
+      lifecycle_scope:enumOr(r.lifecycle_scope, JD_LIFECYCLE, 'not_applicable'),
+      deployment_model:enumOr(r.deployment_model, DEPLOYMENTS, 'not_applicable'),
+      exact_credential:String(r.exact_credential || ''),
+      version_constraint:String(r.version_constraint || ''),
+      capability_name:String(r.capability_name || r.text || ''),
+      intelligence_category:enumOr(r.intelligence_category, JD_INTEL_CATEGORIES, 'technical'),
+      importance:enumOr(r.importance, JD_IMPORTANCE, 'medium'),
+      importance_reason:String(r.importance_reason || r.priority_basis || ''),
+      explicit_tier:enumOr(r.explicit_tier, JD_TIERS, 'none'),
+      capability_group:String(r.capability_group || r.capability_name || requirementId),
+      responsibility_level:enumOr(r.responsibility_level, JD_RESPONSIBILITY, 'unspecified'),
+      evidence_equivalents:arrayOf(r.evidence_equivalents).map(String).slice(0,4),
+      partial_evidence:arrayOf(r.partial_evidence).map(String).slice(0,3),
+      non_equivalents:arrayOf(r.non_equivalents).map(String).slice(0,3),
+      pathway_ids:arrayOf(r.pathway_ids).map(String).slice(0,4),
+      evaluation_dimensions,
+    };
+  }).slice(0,24);
+
+  return {
+    role_title:String(source.role_title || ''),
+    role_summary:String(source.role_summary || ''),
+    intelligence:{
+      role_intent:String(source.role_intent || source.role_summary || ''),
+      role_family:String(source.role_family || 'unspecified'),
+      role_focus:String(source.role_focus || ''),
+      ambiguities:arrayOf(source.ambiguities).map(String).slice(0,8),
+      pathways:arrayOf(source.pathways).map((p) => ({
+        id:String(p?.id || ''), label:String(p?.label || ''), explanation:String(p?.explanation || ''),
+      })).filter((p) => p.id).slice(0,4),
+    },
+    requirements,
+  };
+}
+
 export function normalizeEvaluationTransport(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   const flatDimensions = arrayOf(source.dimension_support || source.dimensions);
