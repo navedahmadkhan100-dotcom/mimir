@@ -51,10 +51,10 @@ export class GeminiExtractor {
         mime_type: 'application/json',
         schema,
       },
+      // Gemini 3.5 Flash-Lite defaults to minimal thinking. Avoid deprecated
+      // sampling controls (temperature/top_p/top_k), which newer Gemini 3.x
+      // API revisions can reject with HTTP 400 INVALID_ARGUMENT.
       generation_config: {
-        temperature: 0,
-        seed: 424242,
-        thinking_level: 'minimal',
         max_output_tokens: maxOutputTokens,
       },
     });

@@ -17,11 +17,13 @@ test('structured-output arrays are bounded to avoid runaway JSON generation', ()
   assert.equal(warmEvaluationSchema.properties.matches.maxItems, 24);
 });
 
-test('Gemini adapter uses separate output budgets and minimal thinking', () => {
+test('Gemini adapter uses separate output budgets and avoids deprecated sampling controls', () => {
   const src = fs.readFileSync(new URL('../src/gemini.js', import.meta.url), 'utf8');
   assert.match(src, /JD_SYSTEM_INSTRUCTION, 9000/);
   assert.match(src, /EVALUATION_SYSTEM_INSTRUCTION, 14000/);
-  assert.match(src, /thinking_level:\s*'minimal'/);
+  assert.doesNotMatch(src, /temperature\s*:/);
+  assert.doesNotMatch(src, /top_p\s*:/);
+  assert.doesNotMatch(src, /top_k\s*:/);
   assert.match(src, /store:\s*false/);
 });
 

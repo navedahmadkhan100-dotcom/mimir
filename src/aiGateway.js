@@ -1,6 +1,6 @@
 import { GeminiExtractor, MODEL_ID as GEMINI_MODEL_ID } from './gemini.js';
 
-export const AI_GATEWAY_VERSION = '5.0.1-fast-brain-timeout';
+export const AI_GATEWAY_VERSION = '5.0.2-gemini35-api-hotfix';
 
 export class AITimeoutError extends Error {
   constructor(stage, durationMs) {
@@ -40,7 +40,9 @@ export class AIGateway {
       console.info(`[Mimir AI] ${stage} completed in ${Date.now() - startedAt}ms`);
       return result;
     } catch (error) {
-      console.warn(`[Mimir AI] ${stage} failed after ${Date.now() - startedAt}ms; type=${error?.code || error?.name || 'Error'}`);
+      const providerStatus = error?.status || error?.response?.status || error?.code || error?.name || 'Error';
+      const providerMessage = String(error?.message || '').replace(/\s+/g, ' ').slice(0, 500);
+      console.warn(`[Mimir AI] ${stage} failed after ${Date.now() - startedAt}ms; type=${providerStatus}; message=${providerMessage}`);
       throw error;
     } finally {
       if (timer) clearTimeout(timer);
